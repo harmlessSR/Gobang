@@ -21,10 +21,15 @@ int PlayGobang();           //五子棋内容
 //将棋形读取进Pattern,x,y为目标点位,Index表征以何方视角计分（BLACK/WHITE）empty_flag用于表征是否假想如果在这里下棋会怎样，若是填1
 void GetPattern(int x,int y,int Index,int empty_flag); 
 //getpattern的辅助函数，会返回此时在pattern中应该为什么数字;BoardContent:棋盘上的内容，一般填Board[][],Index同上      
-int PatternNumber(int BoardContent,int Index);              
+int PatternNumber(int BoardContent,int Index);        
+//比较两个字符串是否能匹配，source是需比较的,target是目标,匹配成功返回1    
+int ComparePattern(int source[],int target[]);  
+//给棋形打分（默认为我方立场），返回得分
+
 
 int main()
 {
+
     SelectMode();       //选择模式 
     InitBoard();        //初始化棋盘
     ShowBoard();        //打印棋盘
@@ -158,15 +163,16 @@ void ShowBoard()            //打印棋盘
     printf("\n");
 }
 
-int PlayGobang(){
+int PlayGobang()
+{
     
+
     int tBlacky , tWhitey;                    //记录下棋坐标
     char tBlackx, tWhitex;
     int iFlag_FirstRound = 0;               //记录是否是第一回合（用于调整棋子是前一手还是通常显示） 
 
    if(nMode == 1){
         while(1){
-            printf("xs");
             /* 黑子人下 */
             if(iFlag_FirstRound == 1){
                 Board[tBlackx][tBlacky] = BLACK;        //如果不是第一局，将前一步调整为通常显示
@@ -180,12 +186,6 @@ int PlayGobang(){
             ShowBoard();
             
             GetPattern(tBlackx,tBlacky,BLACK,0);
-            for(int a = 0; a < 3; a++){
-                for(int b = 0; b < SIZE; b++)
-                    printf("%d",Pattern[a][b]);
-                printf("\n");
-            }
-            printf("nihao\n");
             /*白子人下*/
             if(iFlag_FirstRound == 1){
                 Board[tWhitex][tWhitey] = WHITE;
@@ -215,14 +215,14 @@ void GetPattern(int x,int y,int Index,int empty_flag)
 
     for(int i = 0; i < 4; i++){                 //初始化
         for(int j = 0; j < 15; j++)
-            Pattern[i][j] = 2;
+            Pattern[i][j] = 3;
     }
 
     for(int i = 0;i < 15; i++){
-        Pattern[0][i] = PatternNumber(Board[i][y],Index);
+        Pattern[0][i] = PatternNumber(Board[i][y],Index);       //横
     }
     for(int i = 0;i < 15; i++){
-        Pattern[1][i] = PatternNumber(Board[x][i],Index);
+        Pattern[1][i] = PatternNumber(Board[x][i],Index);       //竖
     }
 
     int x0 = x + y - 14;   //右斜线左上起点的x坐标
@@ -234,8 +234,9 @@ void GetPattern(int x,int y,int Index,int empty_flag)
     else if(x0 < 0){
         x0 = -x0;
         for(int i = 0; i < 15 - x0; i++){
-            Pattern[2][i] = PatternNumber(Board[i][x0-i],Index);
+            Pattern[2][i] = PatternNumber(Board[i][14-x0-i],Index);
         }
+    }
 
     int y0 = x - y;
     if(y0 >= 0){
@@ -250,12 +251,13 @@ void GetPattern(int x,int y,int Index,int empty_flag)
         }
     }
 
-    if(Board == 1){
+    if(empty_flag == 1){
         Board[x][y] = TemMemory;
-    }//恢复至原始状态
+    }
+    //恢复至原始状态
+    }
 
-}
-
+//0为空 1为我方 2为敌方 3为墙
 int PatternNumber(int a,int Index)
 {
     if(a == WHITE || a == TemWHITE){
@@ -268,3 +270,14 @@ int PatternNumber(int a,int Index)
     }
     else return 0;
 }
+
+int ComparePattern(int source[],int target[])
+{
+    for(int i = 0; i < 14; i++){         //target的第一位与source的哪一位匹配
+        for(int j = 0; source[i+j] == target[j] && ((i+j) <= 14) && target[j] != '\0'; j++)
+            if(target[j+1] == 99)  return 1;       //99表示棋形代码中止
+    }
+    
+    return 0;
+}
+
