@@ -16,7 +16,7 @@ int nWinner;                //储存最后赢家,1黑2白
 void InitBoard();           //初始化棋盘
 void ShowBoard();           //显示棋盘
 void SelectMode();          //选择游戏模式
-void PlayGobang();           //五子棋内容
+int PlayGobang();           //五子棋内容
 
 //将棋形读取进Pattern,x,y为目标点位,Index表征以何方视角计分（BLACK/WHITE）empty_flag用于表征是否假想如果在这里下棋会怎样，若是填1
 void GetPattern(int x,int y,int Index,int empty_flag); 
@@ -56,6 +56,7 @@ void SelectMode()
     system("cls");
     printf("请选择模式，人机对战输入1，人人对战输入2：");
     scanf("%d",&temMode);
+    getchar();
     if(temMode == 1){
         nMode = 1;
         printf("\n请选择电脑执黑执白，黑输入1白输入2：");
@@ -175,8 +176,6 @@ void ShowBoard()            //打印棋盘
 
 int PlayGobang()
 {
-    
-
     int tBlacky , tWhitey;                    //记录下棋坐标
     char tBlackx, tWhitex;
     int iFlag_FirstRound = 0;               //记录是否是第一回合（用于调整棋子是前一手还是通常显示） 
@@ -218,10 +217,13 @@ int PlayGobang()
                 Board[tBlackx][tBlacky] = BLACK;        //如果不是第一局，将前一步调整为通常显示
             }
             nFlag = 1;
-            scanf("%c%d",&tBlackx,&tBlacky);
-            getchar();
-            tBlackx = tBlackx - 'a';
-            tBlacky = tBlacky - 1;
+            GetPoint();
+            tBlackx = BestPoint[0];
+            tBlacky = BestPoint[1];
+            if(iFlag_FirstRound == 0){
+                tBlackx = 7;
+                tBlacky = 7;
+            }
             Board[tBlackx][tBlacky] = TemBLACK;
             ShowBoard();
             
@@ -241,6 +243,7 @@ int PlayGobang()
         }
    }
      
+    return 0;
 }
 
 void GetPattern(int x,int y,int Index,int empty_flag)
@@ -333,9 +336,10 @@ int AssessPattern(int index)
     else if(index == 2) p = 1;
     else printf("error in assesspattern\n");        //选择使用评分表的哪一行
     
-    int TargetPatterns[8][7] = {{1,1,1,1,1,99},{0,1,1,1,1,0,99},{0,1,1,1,1,2,99},{2,1,1,1,1,0,99},{0,1,1,1,0,99},{0,1,1,1,2,99},{2,1,1,1,0,99},{0,1,1,0,99}};
-    int Scores[8][2] = {{10000,1000},{200,100},{50,20},{50,20},{30,10},{8,5},{8,5},{2,1}};
-    //棋形与分数对照表，目前还很简陋
+    int TargetPatterns[10][7] = {{1,1,1,1,1,99},{0,1,1,1,1,0,99},{0,1,1,1,1,2,99},{2,1,1,1,1,0,99},{0,1,1,1,0,99},{0,1,1,1,2,99},{2,1,1,1,0,99},{0,1,1,0,99}
+    ,{0,1,2,99},{2,1,0,99}};
+    int Scores[10][2] = {{10000,1000},{200,100},{50,20},{50,20},{30,10},{8,5},{8,5},{2,1},{-1,0},{-1,0}};
+    //棋形与分数对照表，目前还很简陋!
 
     for(int i = 0; i < 4; i++ ){
         for(int j = 0; j < 8; j++){
@@ -371,6 +375,7 @@ int AssessPoint(int x,int y)
     After_they = AssessPattern(2);      //算分
 
     score = After_we - Before_we + After_they - Before_they;
+    printf("%d",score);
     return score;
 }
 
@@ -378,7 +383,7 @@ void GetPoint()
 {
     int HiScore = 0,score;
     for(int x = 0; x<15; x++){
-        for(int y = 0; y<15 && Board[x][y] != WHITE && Board[x][y] != TemWHITE && Board[x][y] != BLACK && Board[x][y] != TemBLACK){
+        for(int y = 0; y<15 && Board[x][y] != WHITE && Board[x][y] != TemWHITE && Board[x][y] != BLACK && Board[x][y] != TemBLACK; y++){
             score = AssessPoint(x,y);
             if(score > HiScore){
                 HiScore = score;
