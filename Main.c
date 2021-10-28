@@ -24,21 +24,37 @@ void GetPattern(int x,int y,int Index,int empty_flag);
 int PatternNumber(int BoardContent,int Index);        
 //比较两个字符串是否能匹配，source是需比较的,target是目标,返回source中有几个target字段
 int ComparePattern(int source[],int target[]);  
-//给棋形打分，返回得分,index表示是算我方得分还是算阻止敌方得分,我为1敌方为2
+/**
+ * @brief 给棋形打分，返回得分
+ * @param index 表示是算我方得分还是算阻止敌方得分,我为1敌方为2
+ **/
 int AssessPattern(int index);
 //对棋盘上空置的一点评估得出得分，返回分数
 int AssessPoint(int x,int y);
 //遍历棋盘返回分数最高的点
 void GetPoint();
 int BestPoint[2];   //储存getpoint找到的最好点
+//如果该点未被占用返回1
+int WhetherOccupied(int x,int y);
+
 
 int main()
 {
     /*保留用于测试comparepattern的部分，后续优化*/
-    // int testsource[15] = {1,2,1,2,1,6,7,8,9,10,11,12,13,14,15};
-    // int testtarget[] = {1,2,1,99};
+    // int testsource[15] = {0,0,0,0,1,1,1,0,0,0,0,0,0,0,0};
+    // int testtarget[] = {0,1,1,1,0,99};
     // printf("%d",ComparePattern(testsource, testtarget));
     // system("pause");
+
+    //测试assesspattern
+    // for(int m = 0; m < 4; m++){
+    //     for(int n = 0; n < 15; n++){
+    //         Pattern[m][n] = 0;
+    //     }
+    // }
+    // Pattern[1][2] = Pattern[1][3] = Pattern[1][4] = 1;
+    // int testscore = AssessPattern(1);
+    // printf("%d\n",testscore);
 
     SelectMode();       //选择模式 
     InitBoard();        //初始化棋盘
@@ -46,6 +62,9 @@ int main()
 
     nWinner = PlayGobang();
     
+    
+    
+    system("pause");
     return 0;
 }
 
@@ -227,6 +246,8 @@ int PlayGobang()
             Board[tBlackx][tBlacky] = TemBLACK;
             ShowBoard();
             
+     
+
             /*白子人下*/
             if(iFlag_FirstRound == 1){
                 Board[tWhitex][tWhitey] = WHITE;
@@ -252,7 +273,7 @@ void GetPattern(int x,int y,int Index,int empty_flag)
     int TemMemory;  //储存被修改的格子原始状态
     if(empty_flag == 1){
         TemMemory = Board[x][y];
-        Board[x][y] == Index;
+        Board[x][y] = Index;
     }//如果要假想下棋就先储存好原始状态再调整棋盘
 
     for(int i = 0; i < 4; i++){                 //初始化
@@ -318,7 +339,7 @@ int ComparePattern(int source[],int target[])
     int count = 0;
     
     for(int i = 0; i < 14; i++){         //target的第一位与source的哪一位匹配
-        for(int j = 0; source[i+j] == target[j] && ((i+j) <= 14) && target[j] != '\0'; j++)
+        for(int j = 0; source[i+j] == target[j] && ((i+j) <= 14) && target[j] != 99; j++)
             if(target[j+1] == 99){
                 count++;
                 break;
@@ -332,13 +353,14 @@ int AssessPattern(int index)
 {
     int p;
     int score = 0;
+    
     if(index == 1) p = 0;
     else if(index == 2) p = 1;
     else printf("error in assesspattern\n");        //选择使用评分表的哪一行
     
     int TargetPatterns[10][7] = {{1,1,1,1,1,99},{0,1,1,1,1,0,99},{0,1,1,1,1,2,99},{2,1,1,1,1,0,99},{0,1,1,1,0,99},{0,1,1,1,2,99},{2,1,1,1,0,99},{0,1,1,0,99}
-    ,{0,1,2,99},{2,1,0,99}};
-    int Scores[10][2] = {{10000,1000},{200,100},{50,20},{50,20},{30,10},{8,5},{8,5},{2,1},{-1,0},{-1,0}};
+    };
+    int Scores[10][2] = {{10000,1000},{200,100},{50,20},{50,20},{30,10},{8,5},{8,5},{2,1}};
     //棋形与分数对照表，目前还很简陋!
 
     for(int i = 0; i < 4; i++ ){
@@ -376,20 +398,71 @@ int AssessPoint(int x,int y)
 
     score = After_we - Before_we + After_they - Before_they;
     printf("%d",score);
+
+
     return score;
 }
 
 void GetPoint()
 {
     int HiScore = 0,score;
-    for(int x = 0; x<15; x++){
-        for(int y = 0; y<15 && Board[x][y] != WHITE && Board[x][y] != TemWHITE && Board[x][y] != BLACK && Board[x][y] != TemBLACK; y++){
-            score = AssessPoint(x,y);
-            if(score > HiScore){
+    if(WhetherOccupied(7,7)){
+    HiScore = AssessPoint(7,7);
+    BestPoint[0] = 7;
+    BestPoint[1] = 7;
+    }
+    int p,q;
+
+
+    for(p = 0; p < 8; p++){
+        for(q = 0; WhetherOccupied(7-p+q,7+p) && q < 2*p; q++){
+            score = AssessPoint(7-p+q,7+p);
+            if(score > HiScore && WhetherOccupied(7-p+q,7+p)){
                 HiScore = score;
-                BestPoint[0] = x;
-                BestPoint[1] = y;
+                BestPoint[0] = 7-p+q;
+                BestPoint[1] = 7+p;
             }
-        }
+        }       //上横
+
+        for(q = 0; WhetherOccupied(7+p-q,7-p) && q < 2*p; q++){
+            score = AssessPoint(7+p-q,7-p);
+            if(score > HiScore && WhetherOccupied(7+p-q,7-p)){
+                HiScore = score;
+                BestPoint[0] = 7+p-q;
+                BestPoint[1] = 7-p;
+            }
+        }       //下横
+    }
+   
+        for(q = 0; WhetherOccupied(7+p,7+p-q) && q < 2*p; q++){
+            score = AssessPoint(7+p,7+p-q);
+            if(score > HiScore && WhetherOccupied(7+p,7+p-q)){
+                HiScore = score;
+                BestPoint[0] = 7+p;
+                BestPoint[1] = 7+p-q;
+            }
+        }       //右竖
+
+        for(q = 0; WhetherOccupied(7-p,7-p+q) && q < 2*p; q++){
+            score = AssessPoint(7-p,7-p+q);
+            if(score > HiScore && WhetherOccupied(7-p,7-p+q)){
+                HiScore = score;
+                BestPoint[0] = 7-p;
+                BestPoint[1] = 7-p+q;
+            }
+        }       //左竖
+
+
+}
+
+int WhetherOccupied(int x,int y)
+{
+    if(Board[x][y] == WHITE || Board[x][y] == TemWHITE || Board[x][y] == BLACK || Board[x][y] == TemBLACK){
+        return 0;
+    }
+    else{
+        return 1;
     }
 }
+
+
