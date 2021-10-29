@@ -36,6 +36,9 @@ void GetPoint();
 int BestPoint[2];   //储存getpoint找到的最好点
 //如果该点未被占用返回1
 int WhetherOccupied(int x,int y);
+//胜负判断,参数为黑白 
+int WhetherWin(int x,int y,int index);
+
 
 
 int main()
@@ -75,7 +78,6 @@ void SelectMode()
     system("cls");
     printf("请选择模式，人机对战输入1，人人对战输入2：");
     scanf("%d",&temMode);
-    getchar();
     if(temMode == 1){
         nMode = 1;
         printf("\n请选择电脑执黑执白，黑输入1白输入2：");
@@ -205,46 +207,54 @@ int PlayGobang()
             if(iFlag_FirstRound == 1){
                 Board[tBlackx][tBlacky] = BLACK;        //如果不是第一局，将前一步调整为通常显示
             }
-            nFlag = 1;
             scanf("%c%d",&tBlackx,&tBlacky);
             getchar();
             tBlackx = tBlackx - 'a';
             tBlacky = tBlacky - 1;
             Board[tBlackx][tBlacky] = TemBLACK;
+            nFlag = 2;
             ShowBoard();
+            if(WhetherWin(tBlackx,tBlacky,BLACK)){
+                printf("黑色赢\n");
+                break;
+            }
             
             /*白子人下*/
             if(iFlag_FirstRound == 1){
                 Board[tWhitex][tWhitey] = WHITE;
             }
-            nFlag = 2;
             scanf("%c%d",&tWhitex,&tWhitey);
             getchar();
             tWhitex = tWhitex - 'a';
             tWhitey = tWhitey - 1;
             Board[tWhitex][tWhitey] = TemWHITE;
+            nFlag = 1;
             ShowBoard();
+            if(WhetherWin(tWhitex,tWhitey,WHITE)){
+                printf("白色赢\n");
+                break;
+            }
 
             if(iFlag_FirstRound == 0) iFlag_FirstRound = 1;     //调整不再是第一局
         }
     }   
    
    if(nMode == 2){
+        nFlag = 2;
         while(1){
             /* 黑子机器下 */
             if(iFlag_FirstRound == 1){
                 Board[tBlackx][tBlacky] = BLACK;        //如果不是第一局，将前一步调整为通常显示
             }
-            nFlag = 1;
             GetPoint();
             tBlackx = BestPoint[0];
             tBlacky = BestPoint[1];
-            if(iFlag_FirstRound == 0){
-                tBlackx = 7;
-                tBlacky = 7;
-            }
             Board[tBlackx][tBlacky] = TemBLACK;
             ShowBoard();
+            if(WhetherWin(tBlackx,tBlacky,BLACK)){
+                printf("黑色赢\n");
+                break;
+            }
             
      
 
@@ -252,18 +262,59 @@ int PlayGobang()
             if(iFlag_FirstRound == 1){
                 Board[tWhitex][tWhitey] = WHITE;
             }
-            nFlag = 2;
             scanf("%c%d",&tWhitex,&tWhitey);
             getchar();
             tWhitex = tWhitex - 'a';
             tWhitey = tWhitey - 1;
             Board[tWhitex][tWhitey] = TemWHITE;
             ShowBoard();
+            if(WhetherWin(tWhitex,tWhitey,WHITE)){
+                printf("白色赢\n");
+                break;
+            }
 
             if(iFlag_FirstRound == 0) iFlag_FirstRound = 1;     //调整不再是第一局
         }
    }
      
+
+    if(nMode == 3){
+        nFlag = 1;
+        while(1){
+            /* 黑子人下 */
+            if(iFlag_FirstRound == 1){
+                Board[tBlackx][tBlacky] = BLACK;        //如果不是第一局，将前一步调整为通常显示
+            }
+            scanf("%c%d",&tBlackx,&tBlacky);
+            getchar();
+            tBlackx = tBlackx - 'a';
+            tBlacky = tBlacky - 1;
+            Board[tBlackx][tBlacky] = TemBLACK;
+            ShowBoard();
+            if(WhetherWin(tBlackx,tBlacky,BLACK)){
+                printf("黑色赢\n");
+                break;
+            }
+     
+
+            /*白子机器下*/
+            if(iFlag_FirstRound == 1){
+                Board[tWhitex][tWhitey] = WHITE;
+            }
+            GetPoint();
+            tWhitex = BestPoint[0];
+            tWhitey = BestPoint[1];
+            Board[tWhitex][tWhitey] = TemWHITE;
+            ShowBoard();
+            if(WhetherWin(tWhitex,tWhitey,WHITE)){
+                printf("白色赢\n");
+                break;
+            }
+
+            if(iFlag_FirstRound == 0) iFlag_FirstRound = 1;     //调整不再是第一局
+        }
+   }
+
     return 0;
 }
 
@@ -360,7 +411,7 @@ int AssessPattern(int index)
     
     int TargetPatterns[10][7] = {{1,1,1,1,1,99},{0,1,1,1,1,0,99},{0,1,1,1,1,2,99},{2,1,1,1,1,0,99},{0,1,1,1,0,99},{0,1,1,1,2,99},{2,1,1,1,0,99},{0,1,1,0,99}
     };
-    int Scores[10][2] = {{10000,1000},{200,100},{50,20},{50,20},{30,10},{8,5},{8,5},{2,1}};
+    int Scores[10][2] = {{10000,1000},{200,100},{45,20},{45,20},{30,20},{8,5},{8,5},{2,1}};
     //棋形与分数对照表，目前还很简陋!
 
     for(int i = 0; i < 4; i++ ){
@@ -465,4 +516,27 @@ int WhetherOccupied(int x,int y)
     }
 }
 
+int WhetherWin(int x,int y,int index)
+{
+    int WinPattern[6] = {1,1,1,1,1,99};
+    
+    if(index == BLACK){
+        GetPattern(x,y,BLACK,0);
+        for(int i = 0; i < 4; i++){
+            if(ComparePattern(Pattern[i],WinPattern)){
+                return 1;
+            }
+        }
+    }
 
+    if(index == WHITE){
+        GetPattern(x,y,WHITE,0);
+        for(int i = 0; i < 4; i++){
+            if(ComparePattern(Pattern[i],WinPattern)){
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
