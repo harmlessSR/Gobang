@@ -7,11 +7,40 @@
 #define TemWHITE 11        //白子上一步
 #define TemBLACK 21        //黑子上一步
 
+
 int Board[SIZE][SIZE];      //用于储存棋盘
-int Pattern[4][SIZE];       //储存四个方向的棋型，顺序：横、竖、\、/
+int Pattern[4][9];       //储存四个方向的棋型，顺序：横、竖、\、/
 int nFlag = 1;              //储存此时轮到谁的回合，黑子为1白子为2
 int nMode;                  //游戏模式（1：人人对战；2：人机对战机器执黑；3：人机对战机器执白）
 int nWinner;                //储存最后赢家,1黑2白
+
+const int WIN5 = 0;//0->5连珠
+const int ALIVE4 = 1;//1->活4
+const int DIE4 = 2;//2->死4
+const int LOWDIE4 = 3;//3->死4的低级版本
+const int ALIVE3 = 4;//3->活3
+const int TIAO3 = 5;//5->跳3
+const int DIE3 = 6;//6->死3
+const int ALIVE2 = 7;//7->活2
+const int LOWALIVE2 = 8;//8->低级活2
+const int DIE2 = 9;//9->死2
+const int NOTHREAT = 10;//10->没有威胁
+
+const int Levelone = 100000;//成五
+const int Leveltwo = 10000;//成活4 或 双死4 或 死4活3
+const int Levelthree = 5000;//双活3
+const int Levelfour = 1000;//死3高级活3
+const int Levelfive = 500;//死四
+const int Levelsix = 400;//低级死四
+const int Levelseven = 100;//单活3
+const int Leveleight = 90;//跳活3
+const int Levelnine = 50;//双活2
+const int LevelTen = 10;//活2
+const int Leveleleven = 9;//低级活2
+const int Leveltwelve = 5;//死3
+const int Levelthirteen = 2;//死2
+const int Levelfourteen = 1;//没有威胁
+const int Levelfiveteen = 0;//不能下
 
 void InitBoard();           //初始化棋盘
 void ShowBoard();           //显示棋盘
@@ -43,21 +72,6 @@ int WhetherWin(int x,int y,int index);
 
 int main()
 {
-    /*保留用于测试comparepattern的部分，后续优化*/
-    // int testsource[15] = {0,0,0,0,1,1,1,0,0,0,0,0,0,0,0};
-    // int testtarget[] = {0,1,1,1,0,99};
-    // printf("%d",ComparePattern(testsource, testtarget));
-    // system("pause");
-
-    //测试assesspattern
-    // for(int m = 0; m < 4; m++){
-    //     for(int n = 0; n < 15; n++){
-    //         Pattern[m][n] = 0;
-    //     }
-    // }
-    // Pattern[1][2] = Pattern[1][3] = Pattern[1][4] = 1;
-    // int testscore = AssessPattern(1);
-    // printf("%d\n",testscore);
 
     SelectMode();       //选择模式 
     InitBoard();        //初始化棋盘
@@ -328,43 +342,39 @@ void GetPattern(int x,int y,int Index,int empty_flag)
     }//如果要假想下棋就先储存好原始状态再调整棋盘
 
     for(int i = 0; i < 4; i++){                 //初始化
-        for(int j = 0; j < 15; j++)
-            Pattern[i][j] = 3;
+        for(int j = 0; j < 9; j++)
+            Pattern[i][j] = 2;
     }
 
-    for(int i = 0;i < 15; i++){
-        Pattern[0][i] = PatternNumber(Board[i][y],Index);       //横
+    
+    for(int i = 1; i <= 4 && (x-i) >= 0; i++){  //横
+        Pattern[0][4-i] = PatternNumber(Board[x-i][y],Index);
     }
-    for(int i = 0;i < 15; i++){
-        Pattern[1][i] = PatternNumber(Board[x][i],Index);       //竖
+    for(int i = 1; i <= 4 && (x+i) <= 14; i++){
+        Pattern[0][4+i] = PatternNumber(Board[x+i][y],Index);
+    }   
+    
+    for(int i = 1; i <= 4 && (y-i) >= 0; i++){  //竖
+        Pattern[1][4-i] = PatternNumber(Board[x][y-i],Index);
     }
-
-    int x0 = x + y - 14;   //右斜线左上起点的x坐标
-    if(x0 >= 0){
-        for(int i = 0; i < 15 - x0; i++){
-            Pattern[2][i] = PatternNumber(Board[i+x0][14-i],Index);
-        }
+    for(int i = 1; i <= 4 && (y+i) <= 14; i++){
+        Pattern[1][4+i] = PatternNumber(Board[x][y+i],Index);
+    }   
+    
+    for(int i = 1; i <= 4 && (y-i) >= 0 && (x-i) >= 0; i++){  //左斜
+        Pattern[2][4-i] = PatternNumber(Board[x-i][y-i],Index);
     }
-    else if(x0 < 0){
-        x0 = -x0;
-        for(int i = 0; i < 15 - x0; i++){
-            Pattern[2][i] = PatternNumber(Board[i][14-x0-i],Index);
-        }
+    for(int i = 1; i <= 4 && (y+i) <= 14 && (x+i) <= 14; i++){
+        Pattern[2][4+i] = PatternNumber(Board[x+i][y+i],Index);
+    }   
+    
+    for(int i = 1; i <= 4 && (y+i) <= 14 && (x-i) >= 0; i++){  //右斜
+        Pattern[3][4-i] = PatternNumber(Board[x-i][y+i],Index);
     }
-
-    int y0 = x - y;
-    if(y0 >= 0){
-        for(int i = 0; i < 15 - y0; i++){
-            Pattern[3][i] = PatternNumber(Board[y0+i][i],Index);
-        }
-    }
-    else if(y0 < 0){
-        y0 = -y0;
-        for(int i = 0; i < 15 - y0; i++){
-            Pattern[3][i] = PatternNumber(Board[i][y0+i],Index);
-        }
-    }
-
+    for(int i = 1; i <= 4 && (y+i) >= 0 && (x-i) <=14; i++){
+        Pattern[3][4+i] = PatternNumber(Board[x+i][y-i],Index);
+    }   
+    
     if(empty_flag == 1){
         Board[x][y] = TemMemory;
     }
@@ -402,25 +412,7 @@ int ComparePattern(int source[],int target[])
 
 int AssessPattern(int index)
 {
-    int p;
-    int score = 0;
-    
-    if(index == 1) p = 0;
-    else if(index == 2) p = 1;
-    else printf("error in assesspattern\n");        //选择使用评分表的哪一行
-    
-    int TargetPatterns[10][7] = {{1,1,1,1,1,99},{0,1,1,1,1,0,99},{0,1,1,1,1,2,99},{2,1,1,1,1,0,99},{0,1,1,1,0,99},{0,1,1,1,2,99},{2,1,1,1,0,99},{0,1,1,0,99}
-    };
-    int Scores[10][2] = {{10000,1000},{200,100},{45,20},{45,20},{30,20},{8,5},{8,5},{2,1}};
-    //棋形与分数对照表，目前还很简陋!
-
-    for(int i = 0; i < 4; i++ ){
-        for(int j = 0; j < 8; j++){
-            score += Scores[j][p] * ComparePattern(Pattern[i],TargetPatterns[j]);
-        }
-    }
-    
-    return score;
+    int count = 1;
 }
 
 int AssessPoint(int x,int y)
