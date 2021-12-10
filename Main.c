@@ -13,34 +13,53 @@ int Pattern[4][9];       //储存四个方向的棋型，顺序：横、竖、\、/
 int nFlag = 1;              //储存此时轮到谁的回合，黑子为1白子为2
 int nMode;                  //游戏模式（1：人人对战；2：人机对战机器执黑；3：人机对战机器执白）
 int nWinner;                //储存最后赢家,1黑2白
+int pcflag,hmflag;                 //电脑执哪一方
 
-const int WIN5 = 0;//0->5连珠
-const int ALIVE4 = 1;//1->活4
-const int DIE4 = 2;//2->死4
-const int LOWDIE4 = 3;//3->死4的低级版本
-const int ALIVE3 = 4;//3->活3
-const int TIAO3 = 5;//5->跳3
-const int DIE3 = 6;//6->死3
-const int ALIVE2 = 7;//7->活2
-const int LOWALIVE2 = 8;//8->低级活2
-const int DIE2 = 9;//9->死2
-const int NOTHREAT = 10;//10->没有威胁
+struct Situation {//当前位置的形式，打分根据这个来打
+	int win5;//5连珠
+	int alive4;//活4
+	int die4;//死4
+	int lowdie4;//死4低级版本
+	int alive3;//活3
+	int tiao3;//跳3
+	int die3;//死3
+	int alive2;//活2
+	int lowalive2;//低级活2
+	int die2;//死2
+	int nothreat;//没有威胁
+};
 
-const int Levelone = 100000;//成五
-const int Leveltwo = 10000;//成活4 或 双死4 或 死4活3
-const int Levelthree = 5000;//双活3
-const int Levelfour = 1000;//死3高级活3
-const int Levelfive = 500;//死四
-const int Levelsix = 400;//低级死四
-const int Levelseven = 100;//单活3
-const int Leveleight = 90;//跳活3
-const int Levelnine = 50;//双活2
-const int LevelTen = 10;//活2
-const int Leveleleven = 9;//低级活2
-const int Leveltwelve = 5;//死3
-const int Levelthirteen = 2;//死2
-const int Levelfourteen = 1;//没有威胁
-const int Levelfiveteen = 0;//不能下
+#define WIN5 0//0->5连珠
+#define ALIVE4 1//1->活4
+#define DIE4 2//2->死4
+#define LOWDIE4 3//3->死4的低级版本
+#define ALIVE3 4//3->活3
+#define TIAO3 5//5->跳3
+#define DIE3 6//6->死3
+#define ALIVE2 7//7->活2
+#define LOWALIVE2 8//8->低级活2
+#define DIE2 9//9->死2
+#define NOTHREAT 10//10->没有威胁
+
+#define Level1 100000//成五
+#define Level2 10000//成活4 或 双死4 或 死4活3
+#define Level3 5000//双活3
+#define Level4 1000//死3高级活3
+#define Level5 500//死四
+#define Level6 400//低级死四
+#define Level7 100//单活3
+#define Level8 90//跳活3
+#define Level9 50//双活2
+#define Level10 10//活2
+#define Level11 9//低级活2
+#define Level12 5//死3
+#define Level13 2//死2
+#define Level14 1//没有威胁
+#define Level15 0//不能下
+
+#define mycolor 1//我的颜色
+#define empty 0//空
+#define hiscolor 2//敌方或墙
 
 void InitBoard();           //初始化棋盘
 void ShowBoard();           //显示棋盘
@@ -48,18 +67,15 @@ void SelectMode();          //选择游戏模式
 int PlayGobang();           //五子棋内容
 
 //将棋形读取进Pattern,x,y为目标点位,Index表征以何方视角计分（BLACK/WHITE）empty_flag用于表征是否假想如果在这里下棋会怎样，若是填1
-void GetPattern(int x,int y,int Index,int empty_flag); 
+void GetPattern(int x,int y,int Index); 
 //getpattern的辅助函数，会返回此时在pattern中应该为什么数字;BoardContent:棋盘上的内容，一般填Board[][],Index同上      
 int PatternNumber(int BoardContent,int Index);        
-//比较两个字符串是否能匹配，source是需比较的,target是目标,返回source中有几个target字段
-int ComparePattern(int source[],int target[]);  
-/**
- * @brief 给棋形打分，返回得分
- * @param index 表示是算我方得分还是算阻止敌方得分,我为1敌方为2
- **/
-int AssessPattern(int index);
+
+
+//给旗形的一个方向返回是哪一种情况，index表示我方or敌方，我方1敌方2
+int AssessPatternLine(int linenumber, int index);
 //对棋盘上空置的一点评估得出得分，返回分数
-int AssessPoint(int x,int y);
+int AssessPoint(int x,int y,int flag);
 //遍历棋盘返回分数最高的点
 void GetPoint();
 int BestPoint[2];   //储存getpoint找到的最好点
@@ -90,17 +106,21 @@ void SelectMode()
     int temMode,temFlag;                //临时储存模式与先下方
     ReSelect:                           //当玩家输入意料之外的数字时用goto返回这里重新开始选择
     system("cls");
-    printf("请选择模式，人机对战输入1，人人对战输入2：");
+    printf("请选择模式，人机对战输入1，人人对战输入2:");
     scanf("%d",&temMode);
     if(temMode == 1){
         nMode = 1;
-        printf("\n请选择电脑执黑执白，黑输入1白输入2：");
+        printf("\n请选择电脑执黑执白，黑输入1白输入2:");
         scanf("%d",&temFlag);
         if(temFlag == 1){
-            nMode = 2;
+            nMode = 2;      
+            pcflag = BLACK;
+            hmflag = WHITE;
         }
         else if(temFlag == 2){
             nMode = 3;
+            pcflag = WHITE;
+            hmflag = BLACK;
         }
         else{
             goto ReSelect;
@@ -228,11 +248,8 @@ int PlayGobang()
             Board[tBlackx][tBlacky] = TemBLACK;
             nFlag = 2;
             ShowBoard();
-            if(WhetherWin(tBlackx,tBlacky,BLACK)){
-                printf("黑色赢\n");
-                break;
-            }
             
+
             /*白子人下*/
             if(iFlag_FirstRound == 1){
                 Board[tWhitex][tWhitey] = WHITE;
@@ -244,10 +261,6 @@ int PlayGobang()
             Board[tWhitex][tWhitey] = TemWHITE;
             nFlag = 1;
             ShowBoard();
-            if(WhetherWin(tWhitex,tWhitey,WHITE)){
-                printf("白色赢\n");
-                break;
-            }
 
             if(iFlag_FirstRound == 0) iFlag_FirstRound = 1;     //调整不再是第一局
         }
@@ -332,14 +345,8 @@ int PlayGobang()
     return 0;
 }
 
-void GetPattern(int x,int y,int Index,int empty_flag)
+void GetPattern(int x,int y,int Index)
 {
-
-    int TemMemory;  //储存被修改的格子原始状态
-    if(empty_flag == 1){
-        TemMemory = Board[x][y];
-        Board[x][y] = Index;
-    }//如果要假想下棋就先储存好原始状态再调整棋盘
 
     for(int i = 0; i < 4; i++){                 //初始化
         for(int j = 0; j < 9; j++)
@@ -373,12 +380,7 @@ void GetPattern(int x,int y,int Index,int empty_flag)
     }
     for(int i = 1; i <= 4 && (y+i) >= 0 && (x-i) <=14; i++){
         Pattern[3][4+i] = PatternNumber(Board[x+i][y-i],Index);
-    }   
-    
-    if(empty_flag == 1){
-        Board[x][y] = TemMemory;
-    }
-    //恢复至原始状态
+    }       
     }
 
 //0为空 1为我方 2为敌方或墙
@@ -395,62 +397,185 @@ int PatternNumber(int a,int Index)
     else return 0;
 }
 
-int ComparePattern(int source[],int target[])
-{
-    int count = 0;
-    
-    for(int i = 0; i < 14; i++){         //target的第一位与source的哪一位匹配
-        for(int j = 0; source[i+j] == target[j] && ((i+j) <= 14) && target[j] != 99; j++)
-            if(target[j+1] == 99){
-                count++;
-                break;
-            }       //99表示棋形代码中止
-    }
-    
-    return count;
-}
-
-int AssessPattern(int index)
+int AssessPatternLine(int linenumber, int flag)
 {
     int count = 1;
-}
+    int i;
+    int left,right;
+    int leftpos,rightpos;
+   
+        for(int i = 1; PatternNumber(Pattern[linenumber][4-i],flag) == 1; i++){
+            count++;
+        }
+        left = PatternNumber(Pattern[linenumber][4-i],flag);
+        leftpos = 4-i;
+        for(int i = 1; PatternNumber(Pattern[linenumber][4+i],flag) == 1; i++){
+            count++;
+        }
+        right = PatternNumber(Pattern[linenumber][4+i],flag);
+        rightpos = 4+i;
 
-int AssessPoint(int x,int y)
-{
-    int Before_we, After_we, Before_they, After_they; //我方敌方在此点下棋之前之后得分
-    int score;
+        if(count >= 5){
+            return WIN5;
+        }
+        else if(count == 4){
+            if(left == empty && right == empty) return ALIVE4;
+            else if(left == hiscolor && right == hiscolor) return NOTHREAT;
+            else    return DIE4;
+        }
+        
+        else if(count == 3){
+            int left2 = PatternNumber(Pattern[linenumber][leftpos-1],flag);
+            int right2 = PatternNumber(Pattern[linenumber][rightpos + 1],flag);
+            if(left == empty && right == empty){
+                if(left2 == hiscolor && right2 == hiscolor)
+                return DIE3;
+                else if(left2 == mycolor || right2 == mycolor)
+                return LOWDIE4;
+                else if(left2 == empty || right2 == empty)
+                return ALIVE3;
+            }
+            else if(left == hiscolor && right == hiscolor)  return NOTHREAT;
+            else if(left == hiscolor){
+                if(right2 == empty)    return DIE3;
+                else if(right2 == mycolor) return LOWDIE4;
+            }
+            else if(right == hiscolor){
+                if(left2 == empty)    return DIE3;
+                else if(left2 == mycolor) return LOWDIE4;
+            }
+        }
+        else if(count == 2){
+            int left1 = PatternNumber(Pattern[linenumber][leftpos-1],flag);
+            int right1 = PatternNumber(Pattern[linenumber][rightpos + 1],flag);
+            int left2 = PatternNumber(Pattern[linenumber][leftpos-2],flag);
+            int right2 = PatternNumber(Pattern[linenumber][rightpos + 2],flag);
 
-    int we, they;
-    if(nMode == 2){
-        we = BLACK;
-        they = WHITE;
+            if(left == empty && right == empty)
+            {
+                if((left1 == empty && left2 == mycolor) || (right1 == empty && right2 == mycolor))  return DIE3;
+                else if(left1 == empty && right1  == empty) return ALIVE2;
+                if((right1 == mycolor && right2 == mycolor)||(left1 == mycolor && left2 == mycolor))    return LOWDIE4;
+                if((right1 == mycolor && right2 == hiscolor) || (left1 == mycolor && left2 == hiscolor))    return DIE3;
+                if((right1 == mycolor && right2 == empty) || (left1 == mycolor && left2 == empty)) return TIAO3;
+            }
+            else if(left == hiscolor && right == hiscolor)  return NOTHREAT;
+            else if(left == empty || right == empty)
+            {
+                if(left == hiscolor){
+                    if(right1 == hiscolor || right2 == hiscolor)    return NOTHREAT;
+                    else if(right1 == empty && right2 == empty)     return DIE2;
+                    else if(right1 == mycolor && right2 == mycolor) return DIE4;
+                    else if(right1 == mycolor || right2 == mycolor) return DIE3;
+                }
+                else if(right == hiscolor){
+                    if(left1 == hiscolor || left2 == hiscolor)  return NOTHREAT;
+                    else if(left1 == empty && left2 == empty)   return DIE2;
+                    else if(left1 == mycolor && left2 == mycolor)   return DIE4;
+                    else if(left1 == mycolor || left2 == mycolor)   return DIE3;
+                }
+            }
+        }
+        else if(count == 1){
+            int left1 = PatternNumber(Pattern[linenumber][leftpos-1],flag);
+            int right1 = PatternNumber(Pattern[linenumber][rightpos + 1],flag);
+            int left2 = PatternNumber(Pattern[linenumber][leftpos-2],flag);
+            int right2 = PatternNumber(Pattern[linenumber][rightpos + 2],flag);
+            int left3 = PatternNumber(Pattern[linenumber][leftpos-3],flag);
+            int right3 = PatternNumber(Pattern[linenumber][rightpos + 3],flag);
+
+            if(left == empty && left1 == mycolor && left2 == mycolor && left3 == mycolor && right == empty && right1 == mycolor && right2 == mycolor && right3 == mycolor)  return ALIVE4;
+            else if(left == empty && left1 == mycolor && left2 == mycolor && left3 == mycolor)   return LOWDIE4;
+            else if(right == empty && right1 == mycolor && right2 == mycolor && right3 == mycolor)   return LOWDIE4;
+            else if(left == empty && left1 == mycolor && left2 == mycolor && left3 == empty && right == empty)  return TIAO3;
+            else if(right == empty && right1 == mycolor && right2 ==mycolor && right3 == empty && left == empty) return TIAO3;
+            else if(left == empty && left1 == mycolor && left2 == mycolor && left3 == hiscolor && right == empty)   return DIE3;
+            else if(right == empty && right1 == mycolor && right2 == mycolor && right3 == hiscolor && left == empty)    return DIE3;
+            else if(left == empty && left1 == empty && left2 == mycolor && left3 == mycolor)    return DIE3;
+            else if(right == empty && right1 == empty && right2 == empty && right3 == mycolor)  return DIE3;
+            else if(left == empty && left1 == mycolor && left2 == empty && left3 == mycolor)    return DIE3;
+            else if(right == empty && right1 == mycolor && right2 == empty && right3 == mycolor)    return DIE3;
+            else if(left == empty && left1 == mycolor && left2 == empty && left3 == empty && right == empty)    return LOWALIVE2;
+            else if(right == empty && right1 == mycolor && right2 == empty && right3 == empty && left == empty) return LOWALIVE2;
+            else if(left == empty && left1 == empty && left2 == mycolor && left3 == empty && right == empty)    return LOWALIVE2;
+            else if(right == empty && right1 == empty && right2 == mycolor && right3 == empty && left == empty) return LOWALIVE2;
+        }
+        return NOTHREAT;
     }
-    else if(nMode == 3){
-        we = WHITE;
-        they = BLACK;
-    }                           //确定敌我颜色
 
-    GetPattern(x,y,we,0);
-    Before_we = AssessPattern(1);
-    GetPattern(x,y,we,1);
-    After_we = AssessPattern(1);
-    GetPattern(x,y,they,0);
-    Before_they = AssessPattern(2);
-    GetPattern(x,y,they,1);
-    After_they = AssessPattern(2);      //算分
+int AssessPoint(int x,int y,int flag)
+{
+    struct Situation situation = {0};
+    if(WhetherOccupied(x,y) == 0)   return Level15;
 
-    score = After_we - Before_we + After_they - Before_they;
-    printf("%d",score);
+    GetPattern(x,y,flag);
+    for(int i = 0; i <= 3; i++){
+        int line;
+        line = AssessPatternLine(i,flag);
+        switch(line){
+        case WIN5:
+			situation.win5++;
+			break;
+		case ALIVE4:
+			situation.alive4++;
+			break;
+		case DIE4:
+			situation.die4++;
+			break;
+		case LOWDIE4:
+			situation.lowdie4++;
+			break;
+		case ALIVE3:
+			situation.alive3++;
+			break;
+		case TIAO3:
+			situation.tiao3++;
+			break;
+		case DIE3:
+			situation.die3++;
+			break;
+		case ALIVE2:
+			situation.alive2++;
+			break;
+		case LOWALIVE2:
+			situation.lowalive2++;
+			break;
+		case DIE2:
+			situation.die2++;
+			break;
+		case NOTHREAT:
+			situation.nothreat++;
+			break;
+		default:
+			break;
+        }
+    }
 
+    int die4num = situation.die4 + situation.lowdie4;
+    int alive3num = situation.alive3 + situation.tiao3;
+    int alive2num = situation.alive2 + situation.lowalive2;
 
-    return score;
+    if(situation.win5 >= 1) return Level1;
+    if(situation.alive4 >= 1 || die4num >= 2 || (die4num >= 1 && alive3num >=1))    return Level2;
+    if(alive3num >= 2)  return Level3;
+    if(situation.die3 >=1 && situation.alive3 >= 1) return Level4;
+    if(situation.die4 >= 1) return Level5;
+    if(situation.lowdie4 >= 1)  return Level6;
+    if(situation.alive3 >= 1)   return Level7;
+    if(situation.tiao3 >= 1)    return Level8;
+    if(alive2num >= 2)   return Level9;
+    if(situation.alive2 >= 1)    return Level10;
+    if(situation.lowalive2 >= 1)    return Level11;
+    if(situation.die3 >= 1) return Level12;
+    if(situation.die2 >= 1) return Level13;
+    return Level14;
 }
 
 void GetPoint()
 {
     int HiScore = 0,score;
     if(WhetherOccupied(7,7)){
-    HiScore = AssessPoint(7,7);
+    HiScore = AssessPoint(7,7,pcflag);
     BestPoint[0] = 7;
     BestPoint[1] = 7;
     }
@@ -459,7 +584,7 @@ void GetPoint()
 
     for(p = 0; p < 8; p++){
         for(q = 0; WhetherOccupied(7-p+q,7+p) && q < 2*p; q++){
-            score = AssessPoint(7-p+q,7+p);
+            score = AssessPoint(7-p+q,7+p,pcflag);
             if(score > HiScore && WhetherOccupied(7-p+q,7+p)){
                 HiScore = score;
                 BestPoint[0] = 7-p+q;
@@ -468,7 +593,7 @@ void GetPoint()
         }       //上横
 
         for(q = 0; WhetherOccupied(7+p-q,7-p) && q < 2*p; q++){
-            score = AssessPoint(7+p-q,7-p);
+            score = AssessPoint(7+p-q,7-p,pcflag);
             if(score > HiScore && WhetherOccupied(7+p-q,7-p)){
                 HiScore = score;
                 BestPoint[0] = 7+p-q;
@@ -478,7 +603,7 @@ void GetPoint()
     }
    
         for(q = 0; WhetherOccupied(7+p,7+p-q) && q < 2*p; q++){
-            score = AssessPoint(7+p,7+p-q);
+            score = AssessPoint(7+p,7+p-q,pcflag);
             if(score > HiScore && WhetherOccupied(7+p,7+p-q)){
                 HiScore = score;
                 BestPoint[0] = 7+p;
@@ -487,7 +612,7 @@ void GetPoint()
         }       //右竖
 
         for(q = 0; WhetherOccupied(7-p,7-p+q) && q < 2*p; q++){
-            score = AssessPoint(7-p,7-p+q);
+            score = AssessPoint(7-p,7-p+q,pcflag);
             if(score > HiScore && WhetherOccupied(7-p,7-p+q)){
                 HiScore = score;
                 BestPoint[0] = 7-p;
@@ -510,25 +635,5 @@ int WhetherOccupied(int x,int y)
 
 int WhetherWin(int x,int y,int index)
 {
-    int WinPattern[6] = {1,1,1,1,1,99};
-    
-    if(index == BLACK){
-        GetPattern(x,y,BLACK,0);
-        for(int i = 0; i < 4; i++){
-            if(ComparePattern(Pattern[i],WinPattern)){
-                return 1;
-            }
-        }
-    }
-
-    if(index == WHITE){
-        GetPattern(x,y,WHITE,0);
-        for(int i = 0; i < 4; i++){
-            if(ComparePattern(Pattern[i],WinPattern)){
-                return 1;
-            }
-        }
-    }
-
     return 0;
 }
