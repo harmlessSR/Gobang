@@ -7,8 +7,9 @@
 #define TemWHITE 11        //白子上一步
 #define TemBLACK 21        //黑子上一步
 
-
-int Board[SIZE][SIZE];      //用于储存棋盘
+int scoreboard[SIZE][SIZE];
+int Board[SIZE][SIZE];      //用于储存棋盘（真实棋子）
+int temBoard[4][SIZE][SIZE];   //储存临时棋盘（在向后推算时），分别为四步所用
 int Pattern[4][9];       //储存四个方向的棋型，顺序：横、竖、\、/
 int nFlag = 1;              //储存此时轮到谁的回合，黑子为1白子为2
 int nMode;                  //游戏模式（1：人人对战；2：人机对战机器执黑；3：人机对战机器执白）
@@ -70,8 +71,6 @@ int PlayGobang();           //五子棋内容
 void GetPattern(int x,int y,int Index); 
 //getpattern的辅助函数，会返回此时在pattern中应该为什么数字;BoardContent:棋盘上的内容，一般填Board[][],Index同上      
 int PatternNumber(int BoardContent,int Index);        
-
-
 //给旗形的一个方向返回是哪一种情况，index表示我方or敌方，我方1敌方2
 int AssessPatternLine(int linenumber, int index);
 //对棋盘上空置的一点评估得出得分，返回分数
@@ -81,13 +80,21 @@ void GetPoint();
 int BestPoint[2];   //储存getpoint找到的最好点
 //如果该点未被占用返回1
 int WhetherOccupied(int x,int y);
-//胜负判断,参数为黑白 
+//胜负判断,参数为黑白,赢返回1，否则返回0，黑棋触发长连禁手返回-1
 int WhetherWin(int x,int y,int index);
+
 
 
 
 int main()
 {
+    // InitBoard();
+    // Board[7][7] = BLACK;
+    // Board[7][8] = BLACK;
+    // int test = AssessPoint(7,9,BLACK);
+    // ShowBoard();
+    // int t = 1;
+
 
     SelectMode();       //选择模式 
     InitBoard();        //初始化棋盘
@@ -162,7 +169,7 @@ void InitBoard()            //初始化棋盘
 
 void ShowBoard()            //打印棋盘
 {
-    system("cls");          //清屏
+    // system("cls");          //清屏
     
     int i, j;
     int line = 15;       //生成列数的数字标号
@@ -352,7 +359,8 @@ void GetPattern(int x,int y,int Index)
         for(int j = 0; j < 9; j++)
             Pattern[i][j] = 2;
     }
-
+    for(int i = 0; i < 4; i++)
+        Pattern[i][4] = 1;
     
     for(int i = 1; i <= 4 && (x-i) >= 0; i++){  //横
         Pattern[0][4-i] = PatternNumber(Board[x-i][y],Index);
@@ -404,15 +412,15 @@ int AssessPatternLine(int linenumber, int flag)
     int left,right;
     int leftpos,rightpos;
    
-        for(int i = 1; PatternNumber(Pattern[linenumber][4-i],flag) == 1; i++){
+        for(i = 1; Pattern[linenumber][4-i] == 1; i++){
             count++;
         }
-        left = PatternNumber(Pattern[linenumber][4-i],flag);
+        left = Pattern[linenumber][4-i];
         leftpos = 4-i;
-        for(int i = 1; PatternNumber(Pattern[linenumber][4+i],flag) == 1; i++){
+        for(i = 1; Pattern[linenumber][4+i] == 1; i++){
             count++;
         }
-        right = PatternNumber(Pattern[linenumber][4+i],flag);
+        right = Pattern[linenumber][4+i];
         rightpos = 4+i;
 
         if(count >= 5){
@@ -425,8 +433,8 @@ int AssessPatternLine(int linenumber, int flag)
         }
         
         else if(count == 3){
-            int left2 = PatternNumber(Pattern[linenumber][leftpos-1],flag);
-            int right2 = PatternNumber(Pattern[linenumber][rightpos + 1],flag);
+            int left2 = Pattern[linenumber][leftpos-1];
+            int right2 = Pattern[linenumber][rightpos + 1];
             if(left == empty && right == empty){
                 if(left2 == hiscolor && right2 == hiscolor)
                 return DIE3;
@@ -446,10 +454,10 @@ int AssessPatternLine(int linenumber, int flag)
             }
         }
         else if(count == 2){
-            int left1 = PatternNumber(Pattern[linenumber][leftpos-1],flag);
-            int right1 = PatternNumber(Pattern[linenumber][rightpos + 1],flag);
-            int left2 = PatternNumber(Pattern[linenumber][leftpos-2],flag);
-            int right2 = PatternNumber(Pattern[linenumber][rightpos + 2],flag);
+            int left1 = Pattern[linenumber][leftpos-1];
+            int right1 = Pattern[linenumber][rightpos + 1];
+            int left2 = Pattern[linenumber][leftpos-2];
+            int right2 = Pattern[linenumber][rightpos + 2];
 
             if(left == empty && right == empty)
             {
@@ -477,12 +485,12 @@ int AssessPatternLine(int linenumber, int flag)
             }
         }
         else if(count == 1){
-            int left1 = PatternNumber(Pattern[linenumber][leftpos-1],flag);
-            int right1 = PatternNumber(Pattern[linenumber][rightpos + 1],flag);
-            int left2 = PatternNumber(Pattern[linenumber][leftpos-2],flag);
-            int right2 = PatternNumber(Pattern[linenumber][rightpos + 2],flag);
-            int left3 = PatternNumber(Pattern[linenumber][leftpos-3],flag);
-            int right3 = PatternNumber(Pattern[linenumber][rightpos + 3],flag);
+            int left1 = Pattern[linenumber][leftpos-1];
+            int right1 = Pattern[linenumber][rightpos + 1];
+            int left2 = Pattern[linenumber][leftpos-2];
+            int right2 = Pattern[linenumber][rightpos + 2];
+            int left3 = Pattern[linenumber][leftpos-3];
+            int right3 = Pattern[linenumber][rightpos + 3];
 
             if(left == empty && left1 == mycolor && left2 == mycolor && left3 == mycolor && right == empty && right1 == mycolor && right2 == mycolor && right3 == mycolor)  return ALIVE4;
             else if(left == empty && left1 == mycolor && left2 == mycolor && left3 == mycolor)   return LOWDIE4;
@@ -573,56 +581,60 @@ int AssessPoint(int x,int y,int flag)
 
 void GetPoint()
 {
-    int HiScore = 0,score;
-    if(WhetherOccupied(7,7)){
-    HiScore = AssessPoint(7,7,pcflag);
-    BestPoint[0] = 7;
-    BestPoint[1] = 7;
+    int pchiscore,pcscore,hmhiscore,hmscore;
+    int x,y;
+    int pcx,pcy,hmx,hmy;
+    pchiscore = hmhiscore = 0;
+    pcx = pcy = hmx = hmy = 0;
+
+    for(int temy = 14; temy > 0; temy--){
+        for(int temx = 0; temx < 14; temx++)
+           scoreboard[temx][temy] = 0;
+    
+    }//一些调试用代码
+
+    for(x = 0; x <= 14; x++)
+        for(y = 0; y <= 14; y++)
+            if(WhetherOccupied(x,y))
+            {
+                pcscore = AssessPoint(x,y,pcflag);
+                if(pcscore > pchiscore || (pcscore == pchiscore && (abs(x-7)+abs(y-7) < abs(pcx - 7)+abs(pcy - 7)))){
+                    pchiscore = pcscore;
+                    pcx = x;
+                    pcy = y;
+                }
+                scoreboard[x][y] = pcscore;
+            }
+    
+    for(x = 0; x <= 14; x++)
+        for(y = 0; y <= 14; y++)
+        if(WhetherOccupied(x,y))
+        {
+            hmscore = AssessPoint(x,y,hmflag);
+            if(hmscore > hmhiscore || (hmscore == hmhiscore && (abs(x-7)+abs(y-7) < abs(hmx - 7)+abs(hmy - 7)))){
+                hmhiscore = hmscore;
+                hmx = x;
+                hmy = y;
+            }
+        }
+
+    if(pchiscore >= hmhiscore){
+        BestPoint[0] = pcx;
+        BestPoint[1] = pcy;
     }
-    int p,q;
-
-
-    for(p = 0; p < 8; p++){
-        for(q = 0; WhetherOccupied(7-p+q,7+p) && q < 2*p; q++){
-            score = AssessPoint(7-p+q,7+p,pcflag);
-            if(score > HiScore && WhetherOccupied(7-p+q,7+p)){
-                HiScore = score;
-                BestPoint[0] = 7-p+q;
-                BestPoint[1] = 7+p;
-            }
-        }       //上横
-
-        for(q = 0; WhetherOccupied(7+p-q,7-p) && q < 2*p; q++){
-            score = AssessPoint(7+p-q,7-p,pcflag);
-            if(score > HiScore && WhetherOccupied(7+p-q,7-p)){
-                HiScore = score;
-                BestPoint[0] = 7+p-q;
-                BestPoint[1] = 7-p;
-            }
-        }       //下横
+    else{
+        BestPoint[0] = hmx;
+        BestPoint[1] = hmy;
     }
-   
-        for(q = 0; WhetherOccupied(7+p,7+p-q) && q < 2*p; q++){
-            score = AssessPoint(7+p,7+p-q,pcflag);
-            if(score > HiScore && WhetherOccupied(7+p,7+p-q)){
-                HiScore = score;
-                BestPoint[0] = 7+p;
-                BestPoint[1] = 7+p-q;
-            }
-        }       //右竖
-
-        for(q = 0; WhetherOccupied(7-p,7-p+q) && q < 2*p; q++){
-            score = AssessPoint(7-p,7-p+q,pcflag);
-            if(score > HiScore && WhetherOccupied(7-p,7-p+q)){
-                HiScore = score;
-                BestPoint[0] = 7-p;
-                BestPoint[1] = 7-p+q;
-            }
-        }       //左竖
-
+    for(int temy = 14; temy > 0; temy--){
+        for(int temx = 0; temx < 14; temx++)
+            printf("%3d ",scoreboard[temx][temy]);
+        printf("\n");
+    }//一些调试用代码
 
 }
 
+//占用返回0 否则1
 int WhetherOccupied(int x,int y)
 {
     if(Board[x][y] == WHITE || Board[x][y] == TemWHITE || Board[x][y] == BLACK || Board[x][y] == TemBLACK){
@@ -633,7 +645,41 @@ int WhetherOccupied(int x,int y)
     }
 }
 
-int WhetherWin(int x,int y,int index)
+int WhetherWin(int x,int y,int flag)
+{
+    int count = 0;
+    int j;
+    GetPattern(x,y,flag);
+    for(int i = 0; i <= 3; i++){
+        count = 0;
+        for(j = 1; Pattern[i][4-j] == 1; j++){
+            count++;
+        }
+        for(j = 1; Pattern[i][4+j] == 1; j++){
+            count++;
+        }
+        if(count == 5)   return 1;
+        if(count > 5 && flag == WHITE)  return 1;   //白棋无长连禁手
+        if(count > 5 && flag == BLACK)  return -1;
+    }
+    return 0;
+}
+
+//判断一个空格（若下了黑棋）是否是禁手，由于仅限黑棋有禁手故参数仅有x,y，默认指黑棋。若触发禁手返回-1，否则返回0.
+int WhetherForbidden(int x,int y)
 {
     return 0;
+}
+
+//用于复制棋盘到tem中，参数step为几步之后的棋盘
+void CopyBoard(int step)
+{
+    if(step == 1)
+        for(int x = 0; x < 15; x++)
+            for(int y = 0; y < 15; y++)
+                temBoard[0][x][y] = Board[x][y];
+    else if(step <= 4)
+    for(int x = 0; x < 15; x++)
+        for(int y = 0; y < 15; y++)
+            temBoard[step - 1][x][y] = temBoard[step - 2][x][y];
 }
