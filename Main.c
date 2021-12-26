@@ -74,8 +74,9 @@ void GetPattern(int x,int y,int Index);
 int PatternNumber(int BoardContent,int Index);        
 //给旗形的一个方向返回是哪一种情况，index表示我方or敌方，我方1敌方2
 int AssessPatternLine(int linenumber, int index);
-//对棋盘上空置的一点评估得出得分，返回分数
-int AssessPoint(int x,int y,int flag);
+//对棋盘上空置的一点评估得出得分，返回分数,当然也可用于有棋子的点评估分数,用一个指针回传各旗形的个数，用于计算局面分数
+int AssessPoint(int x,int y,int flag,int* name);
+
 //一步贪心算法
 void GetPoint();
 int BestPoint[2];   //储存getpoint找到的最好点
@@ -95,8 +96,8 @@ int AssessForbiddenPatternLine(int linenumber, int flag);
 //判断一个空格（若下了黑棋）是否是禁手，由于仅限黑棋有禁手故参数仅有x,y，默认指黑棋。若触发禁手返回FORBIDDEN，否则返回1.
 int WhetherForbidden(int x,int y);
 
-//评估函数，返回分数
-int evalPoint(int x, int y);
+//评估函数，返回整个局面的分数，有黑白两色可选
+int evalBoard(int flag);
 //基于最大最小值与alpha-beta剪枝的更好的算法
 void GetBestPoint();
 
@@ -541,10 +542,9 @@ int AssessPatternLine(int linenumber, int flag)
         return NOTHREAT;
     }
 
-int AssessPoint(int x,int y,int flag)
+int AssessPoint(int x,int y,int flag, int* name)
 {
     struct Situation situation = {0};
-    if(WhetherOccupied(x,y) == 0)   return Level15;
 
     GetPattern(x,y,flag);
     for(int i = 0; i <= 3; i++){
@@ -609,71 +609,74 @@ int AssessPoint(int x,int y,int flag)
     return Level14;
 }
 
-void GetPoint()
+// void GetPoint()
+// {
+//     int pchiscore,pcscore,hmhiscore,hmscore;
+//     int x,y;
+//     int pcx,pcy,hmx,hmy;
+//     pchiscore = hmhiscore = 0;
+//     pcx = pcy = hmx = hmy = 0;
+
+//     // for(int temy = 14; temy > 0; temy--){
+//     //     for(int temx = 0; temx < 14; temx++)
+//     //        scoreboard[temx][temy] = 0;
+    
+//     // }//一些调试用代码
+
+//     for(x = 0; x <= 14; x++)
+//         for(y = 0; y <= 14; y++)
+//             if(WhetherOccupied(x,y))
+//             {
+//                 pcscore = AssessPoint(x,y,pcflag);
+//                 if(pcscore > pchiscore || (pcscore == pchiscore && (abs(x-7)+abs(y-7) < abs(pcx - 7)+abs(pcy - 7)))){
+//                     pchiscore = pcscore;
+//                     pcx = x;
+//                     pcy = y;
+//                 }
+//                 scoreboard[x][y] = pcscore;
+//             }
+    
+//     for(x = 0; x <= 14; x++)
+//         for(y = 0; y <= 14; y++)
+//         if(WhetherOccupied(x,y))
+//         {
+//             hmscore = AssessPoint(x,y,hmflag);
+//             if(hmscore > hmhiscore || (hmscore == hmhiscore && (abs(x-7)+abs(y-7) < abs(hmx - 7)+abs(hmy - 7)))){
+//                 hmhiscore = hmscore;
+//                 hmx = x;
+//                 hmy = y;
+//             }
+//         }
+
+//     if(pchiscore >= hmhiscore){
+//         BestPoint[0] = pcx;
+//         BestPoint[1] = pcy;
+//     }
+//     else{
+//         BestPoint[0] = hmx;
+//         BestPoint[1] = hmy;
+//     }
+
+
+//     // for(int temy = 14; temy > 0; temy--){
+//     //     for(int temx = 0; temx < 14; temx++)
+//     //         printf("%3d ",scoreboard[temx][temy]);
+//     //     printf("\n");
+//     // }//一些调试用代码
+
+// }
+
+/*评估函数及博弈树部分，寻找最好的点*/
+
+int evalBoard(int flag)
 {
-    int pchiscore,pcscore,hmhiscore,hmscore;
-    int x,y;
-    int pcx,pcy,hmx,hmy;
-    pchiscore = hmhiscore = 0;
-    pcx = pcy = hmx = hmy = 0;
-
-    // for(int temy = 14; temy > 0; temy--){
-    //     for(int temx = 0; temx < 14; temx++)
-    //        scoreboard[temx][temy] = 0;
-    
-    // }//一些调试用代码
-
-    for(x = 0; x <= 14; x++)
-        for(y = 0; y <= 14; y++)
-            if(WhetherOccupied(x,y))
-            {
-                pcscore = AssessPoint(x,y,pcflag);
-                if(pcscore > pchiscore || (pcscore == pchiscore && (abs(x-7)+abs(y-7) < abs(pcx - 7)+abs(pcy - 7)))){
-                    pchiscore = pcscore;
-                    pcx = x;
-                    pcy = y;
-                }
-                scoreboard[x][y] = pcscore;
-            }
-    
-    for(x = 0; x <= 14; x++)
-        for(y = 0; y <= 14; y++)
-        if(WhetherOccupied(x,y))
-        {
-            hmscore = AssessPoint(x,y,hmflag);
-            if(hmscore > hmhiscore || (hmscore == hmhiscore && (abs(x-7)+abs(y-7) < abs(hmx - 7)+abs(hmy - 7)))){
-                hmhiscore = hmscore;
-                hmx = x;
-                hmy = y;
-            }
+    int number[6]; //储存各数量的旗形数目
+    for(int i = 0; i <= 14; i++)
+        for(int j = 0; j <= 14; j++){
+            
         }
 
-    if(pchiscore >= hmhiscore){
-        BestPoint[0] = pcx;
-        BestPoint[1] = pcy;
-    }
-    else{
-        BestPoint[0] = hmx;
-        BestPoint[1] = hmy;
-    }
-
-
-    // for(int temy = 14; temy > 0; temy--){
-    //     for(int temx = 0; temx < 14; temx++)
-    //         printf("%3d ",scoreboard[temx][temy]);
-    //     printf("\n");
-    // }//一些调试用代码
-
-}
-
-
-
-int evalPoint(int x, int y)
-{
-    int pcscore, hmscore, totalscore; //电脑分数，人分数，总分
-    pcscore = AssessPoint(x,y,pcflag);
-    hmscore = AssessPoint(x,y,hmflag);
-    totalscore = 
+    
 }
 
 void GetBestPoint(){
