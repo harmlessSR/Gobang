@@ -9,13 +9,13 @@
 #define FORBIDDEN 25       //禁手
 
 int scoreboard[SIZE][SIZE];
-int Board[SIZE][SIZE];      //用于储存棋盘（真实棋子）
-int temBoard[4][SIZE][SIZE];   //储存临时棋盘（在向后推算时），分别为四步所用
-int Pattern[4][9];       //储存四个方向的棋型，顺序：横、竖、\、/
-int nFlag = 1;              //储存此时轮到谁的回合，黑子为1白子为2
-int nMode;                  //游戏模式（1：人人对战；2：人机对战机器执黑；3：人机对战机器执白）
-int nWinner;                //储存最后赢家,1黑2白
-int pcflag,hmflag;                 //电脑执哪一方
+int Board[SIZE][SIZE];              //用于储存棋盘（真实棋子）
+int temBoard[4][SIZE][SIZE];        //储存临时棋盘（在向后推算时），分别为四步所用
+int Pattern[4][9];                  //储存四个方向的棋型，顺序：横、竖、\、/
+int nFlag = 1;                      //储存此时轮到谁的回合，黑子为1白子为2
+int nMode;                          //游戏模式（1：人人对战；2：人机对战机器执黑；3：人机对战机器执白）
+int nWinner;                        //储存最后赢家
+int pcflag,hmflag;                  //电脑执哪一方
 
 struct Situation {//当前位置的形式，打分根据这个来打
 	int win5;//5连珠
@@ -31,17 +31,17 @@ struct Situation {//当前位置的形式，打分根据这个来打
 	int nothreat;//没有威胁
 };
 
-#define WIN5 0//0->5连珠
-#define ALIVE4 1//1->活4
-#define DIE4 2//2->死4
-#define LOWDIE4 3//3->死4的低级版本
-#define ALIVE3 4//3->活3
-#define TIAO3 5//5->跳3
-#define DIE3 6//6->死3
-#define ALIVE2 7//7->活2
-#define LOWALIVE2 8//8->低级活2
-#define DIE2 9//9->死2
-#define NOTHREAT 10//10->没有威胁
+#define WIN5 0//5连珠
+#define ALIVE4 1//活4
+#define DIE4 2//死4
+#define LOWDIE4 3//眠4
+#define ALIVE3 4//活3
+#define TIAO3 5//跳活3
+#define DIE3 6//死3
+#define ALIVE2 7//活2
+#define LOWALIVE2 8//低级活2
+#define DIE2 9//死2
+#define NOTHREAT 10//无用
 
 #define Level1 100000//成五
 #define Level2 10000//成活4 或 双死4 或 死4活3
@@ -68,16 +68,16 @@ void ShowBoard();           //显示棋盘
 void SelectMode();          //选择游戏模式
 int PlayGobang();           //五子棋内容
 
-//将棋形读取进Pattern,x,y为目标点位,Index表征以何方视角计分（BLACK/WHITE）empty_flag用于表征是否假想如果在这里下棋会怎样，若是填1
+//将棋形读取进Pattern,x,y为目标点位,Index表征以何方视角计分（BLACK/WHITE）
 void GetPattern(int x,int y,int Index); 
 //getpattern的辅助函数，会返回此时在pattern中应该为什么数字;BoardContent:棋盘上的内容，一般填Board[][],Index同上      
 int PatternNumber(int BoardContent,int Index);        
-//给旗形的一个方向返回是哪一种情况，index表示我方or敌方，我方1敌方2
+//给旗形的一个方向返回是哪一种情况，linenumber为pattern中的行数（0-3）
 int AssessPatternLine(int linenumber, int index);
-//对棋盘上空置的一点评估得出得分，返回分数,当然也可用于有棋子的点评估分数,用一个指针回传各旗形的个数，用于计算局面分数
-int AssessPoint(int x,int y,int flag,int* name);
+//对棋盘上空置的一点评估得出得分，返回分数,当然也可用于有棋子的点评估分数
+int AssessPoint(int x,int y,int flag);
 
-//一步贪心算法
+//一步贪心算法，寻找好点
 void GetPoint();
 int BestPoint[2];   //储存getpoint找到的最好点
 
@@ -264,13 +264,14 @@ void ShowBoard()            //打印棋盘
     printf("\n");
 }
 
+
 int PlayGobang()
 {
     int tBlacky , tWhitey;                    //记录下棋坐标
     char tBlackx, tWhitex;
     int iFlag_FirstRound = 0;               //记录是否是第一回合（用于调整棋子是前一手还是通常显示） 
 
-   if(nMode == 1){
+   if(nMode == 1){      //人人对战模式
         while(1){
             /* 黑子人下 */
             if(iFlag_FirstRound == 1){
@@ -283,6 +284,8 @@ int PlayGobang()
             Board[tBlackx][tBlacky] = TemBLACK;
             nFlag = 2;
             ShowBoard();
+            if(WhetherForbidden(tBlackx,tBlacky) == FORBIDDEN)
+                printf("触发了禁手\n");
             
 
             /*白子人下*/
@@ -301,7 +304,7 @@ int PlayGobang()
         }
     }   
    
-   if(nMode == 2){
+    if(nMode == 2){      //人机对战，电脑执黑
         nFlag = 2;
         while(1){
             /* 黑子机器下 */
@@ -313,14 +316,18 @@ int PlayGobang()
             tBlacky = BestPoint[1];
             Board[tBlackx][tBlacky] = TemBLACK;
             ShowBoard();
-            printf("电脑落子于%c%d\n",tBlackx + 'a', tBlacky + 1);
+            printf("电脑落子于%c%d\n",tBlackx + 'a', tBlacky + 1);  //将落子点显示出来
             if(WhetherWin(tBlackx,tBlacky,BLACK))       //黑棋每一步结束之后，判断是否赢了或者下出禁手
                 return BLACK;
             else if(WhetherWin(tBlackx,tBlacky,BLACK) == -1)
                 return FORBIDDEN;                   
             
-     
+            
+            while(0){
             WHITErego:
+            printf("落子于占用点或非法落子，清重试：");
+            }
+
             /*白子人下*/
             if(iFlag_FirstRound == 1){
                 Board[tWhitex][tWhitey] = WHITE;
@@ -329,7 +336,7 @@ int PlayGobang()
             getchar();
             tWhitex = tWhitex - 'a';
             tWhitey = tWhitey - 1;
-            if(WhetherOccupied(tWhitex,tWhitey) == 0)
+            if(WhetherOccupied(tWhitex,tWhitey) == 0 || tWhitex < 0 || tWhitex > 14 || tWhitey < 0 || tWhitey > 14)      //若落子非法或被占用，回到落子之前
                 goto WHITErego;
             Board[tWhitex][tWhitey] = TemWHITE;
             ShowBoard();
@@ -342,7 +349,6 @@ int PlayGobang()
         }
    }
      
-
     if(nMode == 3){
         nFlag = 1;
         while(1){
@@ -542,7 +548,7 @@ int AssessPatternLine(int linenumber, int flag)
         return NOTHREAT;
     }
 
-int AssessPoint(int x,int y,int flag, int* name)
+int AssessPoint(int x,int y,int flag)
 {
     struct Situation situation = {0};
 
@@ -609,79 +615,65 @@ int AssessPoint(int x,int y,int flag, int* name)
     return Level14;
 }
 
-// void GetPoint()
-// {
-//     int pchiscore,pcscore,hmhiscore,hmscore;
-//     int x,y;
-//     int pcx,pcy,hmx,hmy;
-//     pchiscore = hmhiscore = 0;
-//     pcx = pcy = hmx = hmy = 0;
-
-//     // for(int temy = 14; temy > 0; temy--){
-//     //     for(int temx = 0; temx < 14; temx++)
-//     //        scoreboard[temx][temy] = 0;
-    
-//     // }//一些调试用代码
-
-//     for(x = 0; x <= 14; x++)
-//         for(y = 0; y <= 14; y++)
-//             if(WhetherOccupied(x,y))
-//             {
-//                 pcscore = AssessPoint(x,y,pcflag);
-//                 if(pcscore > pchiscore || (pcscore == pchiscore && (abs(x-7)+abs(y-7) < abs(pcx - 7)+abs(pcy - 7)))){
-//                     pchiscore = pcscore;
-//                     pcx = x;
-//                     pcy = y;
-//                 }
-//                 scoreboard[x][y] = pcscore;
-//             }
-    
-//     for(x = 0; x <= 14; x++)
-//         for(y = 0; y <= 14; y++)
-//         if(WhetherOccupied(x,y))
-//         {
-//             hmscore = AssessPoint(x,y,hmflag);
-//             if(hmscore > hmhiscore || (hmscore == hmhiscore && (abs(x-7)+abs(y-7) < abs(hmx - 7)+abs(hmy - 7)))){
-//                 hmhiscore = hmscore;
-//                 hmx = x;
-//                 hmy = y;
-//             }
-//         }
-
-//     if(pchiscore >= hmhiscore){
-//         BestPoint[0] = pcx;
-//         BestPoint[1] = pcy;
-//     }
-//     else{
-//         BestPoint[0] = hmx;
-//         BestPoint[1] = hmy;
-//     }
-
-
-//     // for(int temy = 14; temy > 0; temy--){
-//     //     for(int temx = 0; temx < 14; temx++)
-//     //         printf("%3d ",scoreboard[temx][temy]);
-//     //     printf("\n");
-//     // }//一些调试用代码
-
-// }
-
-/*评估函数及博弈树部分，寻找最好的点*/
-
-int evalBoard(int flag)
+void GetPoint()
 {
-    int number[6]; //储存各数量的旗形数目
-    for(int i = 0; i <= 14; i++)
-        for(int j = 0; j <= 14; j++){
-            
+    int pchiscore,pcscore,hmhiscore,hmscore;
+    int x,y;
+    int pcx,pcy,hmx,hmy;
+    pchiscore = hmhiscore = 0;
+    pcx = pcy = hmx = hmy = 0;
+
+    // for(int temy = 14; temy > 0; temy--){
+    //     for(int temx = 0; temx < 14; temx++)
+    //        scoreboard[temx][temy] = 0;
+    
+    // }//一些调试用代码
+
+    for(x = 0; x <= 14; x++)
+        for(y = 0; y <= 14; y++)
+            if(WhetherOccupied(x,y))
+            {
+                pcscore = AssessPoint(x,y,pcflag);
+                if(pcflag == BLACK && WhetherForbidden(x,y) == FORBIDDEN)
+                    pcscore -= 10000;
+                if(pcscore > pchiscore || (pcscore == pchiscore && (abs(x-7)+abs(y-7) < abs(pcx - 7)+abs(pcy - 7)))){
+                    pchiscore = pcscore;
+                    pcx = x;
+                    pcy = y;
+                }
+                scoreboard[x][y] = pcscore;
+            }
+    
+    for(x = 0; x <= 14; x++)
+        for(y = 0; y <= 14; y++)
+        if(WhetherOccupied(x,y))
+        {
+            hmscore = AssessPoint(x,y,hmflag);
+            if(hmscore > hmhiscore || (hmscore == hmhiscore && (abs(x-7)+abs(y-7) < abs(hmx - 7)+abs(hmy - 7)))){
+                hmhiscore = hmscore;
+                hmx = x;
+                hmy = y;
+            }
         }
 
-    
+    if(pchiscore >= hmhiscore){
+        BestPoint[0] = pcx;
+        BestPoint[1] = pcy;
+    }
+    else{
+        BestPoint[0] = hmx;
+        BestPoint[1] = hmy;
+    }
+
+
+    // for(int temy = 14; temy > 0; temy--){
+    //     for(int temx = 0; temx < 14; temx++)
+    //         printf("%3d ",scoreboard[temx][temy]);
+    //     printf("\n");
+    // }//一些调试用代码
+
 }
 
-void GetBestPoint(){
-
-}
 
 //占用返回0 否则1
 int WhetherOccupied(int x,int y)
@@ -791,6 +783,7 @@ int WhetherForbidden(int x,int y)
         return FORBIDDEN;
     return 1;
 }
+
 //功能同getpattern
 void GetForbiddenPattern(int x,int y,int Index)
 {
