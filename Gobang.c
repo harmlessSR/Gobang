@@ -85,9 +85,9 @@ void GetPoint();
 int BestPoint[2];   //储存getpoint找到的最好点
 
 //如果该点未被占用返回1
-int WhetherOccupied(int x,int y);
+int IsOccupied(int x,int y);
 //胜负判断,参数为黑白,赢返回1，否则返回0，黑棋触发长连禁手返回-1
-int WhetherWin(int x,int y,int index);
+int IsWin(int x,int y,int index);
 
 
 
@@ -99,7 +99,7 @@ void GetForbiddenPattern(int x,int y,int Index);
 //功能同assesspattern
 int AssessForbiddenPatternLine(int linenumber, int flag);
 //判断一个空格（若下了黑棋）是否是禁手，由于仅限黑棋有禁手故参数仅有x,y，默认指黑棋。若触发双三双四禁手返回FORBIDDEN，触发长连禁手返回LONGFORBIDDEN,否则返回1.
-int WhetherForbidden(int x,int y);
+int IsForbidden(int x,int y);
 
 int main()
 {
@@ -270,15 +270,15 @@ int PlayGobang()
             getchar();
             tBlackx = tBlackx - 'a';
             tBlacky = tBlacky - 1;
-            if(WhetherOccupied(tBlackx,tBlacky) == 0 || tBlackx < 0 || tBlackx > 14 || tBlacky < 0 || tBlacky > 14)      //若落子非法或被占用，回到落子之前
+            if(IsOccupied(tBlackx,tBlacky) == 0 || tBlackx < 0 || tBlackx > 14 || tBlacky < 0 || tBlacky > 14)      //若落子非法或被占用，回到落子之前
                 goto BLACKrego0;
 
             Board[tBlackx][tBlacky] = TemBLACK;
             nFlag = 2;  //变换目前下棋方（用于显示标题）
             ShowBoard();
-            if((forbidden = WhetherForbidden(tBlackx,tBlacky)) == LONGFORBIDDEN)    //黑棋每一步结束之后，判断是否赢了或者下出禁手，先考虑长连，再看赢没赢，再看是否双三双四
+            if((forbidden = IsForbidden(tBlackx,tBlacky)) == LONGFORBIDDEN)    //黑棋每一步结束之后，判断是否赢了或者下出禁手，先考虑长连，再看赢没赢，再看是否双三双四
                 return FORBIDDEN;
-            else if(WhetherWin(tBlackx,tBlacky,BLACK))       
+            else if(IsWin(tBlackx,tBlacky,BLACK))       
                 return BLACK;                           //把赢家返回到main函数
             else if(forbidden == FORBIDDEN)
                 return FORBIDDEN;                       //返回禁手到main函数打印结果。
@@ -296,7 +296,7 @@ int PlayGobang()
             getchar();
             tWhitex = tWhitex - 'a';
             tWhitey = tWhitey - 1;
-            if(WhetherOccupied(tWhitex,tWhitey) == 0 || tWhitex < 0 || tWhitex > 14 || tWhitey < 0 || tWhitey > 14)      //若落子非法或被占用，回到落子之前
+            if(IsOccupied(tWhitex,tWhitey) == 0 || tWhitex < 0 || tWhitex > 14 || tWhitey < 0 || tWhitey > 14)      //若落子非法或被占用，回到落子之前
                 goto WHITErego0;
             Board[tWhitex][tWhitey] = TemWHITE;
             nFlag = 1;
@@ -319,9 +319,9 @@ int PlayGobang()
             Board[tBlackx][tBlacky] = TemBLACK;
             ShowBoard();
             printf("电脑落子于%c%d\n",tBlackx + 'a', tBlacky + 1);  //将落子点显示出来
-            if((forbidden = WhetherForbidden(tBlackx,tBlacky)) == LONGFORBIDDEN)    //黑棋每一步结束之后，判断是否赢了或者下出禁手，先考虑长连，再看赢没赢，再看是否双三双四
+            if((forbidden = IsForbidden(tBlackx,tBlacky)) == LONGFORBIDDEN)    //黑棋每一步结束之后，判断是否赢了或者下出禁手，先考虑长连，再看赢没赢，再看是否双三双四
                 return FORBIDDEN;
-            else if(WhetherWin(tBlackx,tBlacky,BLACK))       
+            else if(IsWin(tBlackx,tBlacky,BLACK))       
                 return BLACK;                           //把赢家返回到main函数
             else if(forbidden == FORBIDDEN)
                 return FORBIDDEN;                       //返回禁手到main函数打印结果。
@@ -343,11 +343,11 @@ int PlayGobang()
             getchar();
             tWhitex = tWhitex - 'a';
             tWhitey = tWhitey - 1;
-            if(WhetherOccupied(tWhitex,tWhitey) == 0 || tWhitex < 0 || tWhitex > 14 || tWhitey < 0 || tWhitey > 14)      //若落子非法或被占用，回到落子之前
+            if(IsOccupied(tWhitex,tWhitey) == 0 || tWhitex < 0 || tWhitex > 14 || tWhitey < 0 || tWhitey > 14)      //若落子非法或被占用，回到落子之前
                 goto WHITErego;             //这里肯定有不用goto就能做到的办法，但既然可以这么写就这样了，也比较简洁。
             Board[tWhitex][tWhitey] = TemWHITE;
             ShowBoard();
-            if(WhetherWin(tWhitex,tWhitey,WHITE))      //判定有没有赢
+            if(IsWin(tWhitex,tWhitey,WHITE))      //判定有没有赢
                 return WHITE;
 
             if(iFlag_FirstRound == 0) iFlag_FirstRound = 1;     //调整不再是第一局
@@ -369,13 +369,13 @@ int PlayGobang()
             getchar();
             tBlackx = tBlackx - 'a';
             tBlacky = tBlacky - 1;
-            if(WhetherOccupied(tBlackx,tBlacky) == 0 || tBlackx < 0 || tBlackx > 14 || tBlacky < 0 || tBlacky > 14)      //若落子非法或被占用，回到落子之前
+            if(IsOccupied(tBlackx,tBlacky) == 0 || tBlackx < 0 || tBlackx > 14 || tBlacky < 0 || tBlacky > 14)      //若落子非法或被占用，回到落子之前
                 goto BLACKrego;     
             Board[tBlackx][tBlacky] = TemBLACK;
             ShowBoard();
-            if((forbidden = WhetherForbidden(tBlackx,tBlacky)) == LONGFORBIDDEN)    //黑棋每一步结束之后，判断是否赢了或者下出禁手，先考虑长连，再看赢没赢，再看是否双三双四
+            if((forbidden = IsForbidden(tBlackx,tBlacky)) == LONGFORBIDDEN)    //黑棋每一步结束之后，判断是否赢了或者下出禁手，先考虑长连，再看赢没赢，再看是否双三双四
                 return FORBIDDEN;
-            else if(WhetherWin(tBlackx,tBlacky,BLACK))       
+            else if(IsWin(tBlackx,tBlacky,BLACK))       
                 return BLACK;                           //把赢家返回到main函数
             else if(forbidden == FORBIDDEN)
                 return FORBIDDEN;                       //返回禁手到main函数打印结果。
@@ -392,7 +392,7 @@ int PlayGobang()
             Board[tWhitex][tWhitey] = TemWHITE;
             printf("电脑落子于%c%d\n",tWhitex + 'a', tWhitey + 1);
             ShowBoard();
-            if(WhetherWin(tWhitex,tWhitey,WHITE))
+            if(IsWin(tWhitex,tWhitey,WHITE))
                 return WHITE;
             
 
@@ -564,7 +564,7 @@ int AssessPatternLine(int linenumber, int flag)
                 }
             }
         }
-        else if(count == 1){        //一个棋子的情况更为复杂，这里参考了一写五子棋书籍的介绍，应该能涵盖所有的情况
+        else if(count == 1){        //一个棋子的情况更为复杂，这里参考了一五子棋书籍的介绍，应该能涵盖所有的情况
             int left1 = Pattern[linenumber][leftpos-1];
             int right1 = Pattern[linenumber][rightpos + 1];
             int left2 = Pattern[linenumber][leftpos-2];
@@ -609,14 +609,14 @@ int AssessPatternLine(int linenumber, int flag)
 //给一个点打分，看看下在这里能得多少分
 int AssessPoint(int x,int y,int flag)       
 {
-    struct Situation situation = {0};
+    struct Situation situation = {0};   //结构体用于记录四个方向的棋各是什么情况
 
-    GetPattern(x,y,flag);
+    GetPattern(x,y,flag);       //先把棋四个方向的情况读入pattern数组
     for(int i = 0; i <= 3; i++){
         int line;
-        line = AssessPatternLine(i,flag);
+        line = AssessPatternLine(i,flag);   //返回四个方向是什么旗形，然后记录在结构体里
         switch(line){
-        case LONGFORBIDDEN:
+        case LONGFORBIDDEN:     //长连和五连都计入连五，再另行判断是不是禁手
         case WIN5:
 			situation.win5++;
 			break;
@@ -655,24 +655,48 @@ int AssessPoint(int x,int y,int flag)
         }
     }
 
-    int die4num = situation.die4 + situation.lowdie4;
-    int alive3num = situation.alive3 + situation.tiao3;
+    int die4num = situation.die4 + situation.lowdie4;       //死四和眠四一起计算
+    int alive3num = situation.alive3 + situation.tiao3;     //活三和跳活三一起计算
     int alive2num = situation.alive2 + situation.lowalive2;
 
-    if(situation.win5 >= 1) return Level1;
-    if(situation.alive4 >= 1 || die4num >= 2 || (die4num >= 1 && alive3num >=1))    return Level2;
-    if(alive3num >= 2)  return Level3;
-    if(situation.die3 >=1 && situation.alive3 >= 1) return Level4;
-    if(situation.die4 >= 1) return Level5;
-    if(situation.lowdie4 >= 1)  return Level6;
-    if(situation.alive3 >= 1)   return Level7;
-    if(situation.tiao3 >= 1)    return Level8;
-    if(alive2num >= 2)   return Level9;
-    if(situation.alive2 >= 1)    return Level10;
-    if(situation.lowalive2 >= 1)    return Level11;
-    if(situation.die3 >= 1) return Level12;
-    if(situation.die2 >= 1) return Level13;
-    return Level14;
+    if(situation.win5 >= 1) 
+        return Level1;  //连五 赢     
+    if(situation.alive4 >= 1 || die4num >= 2 || (die4num >= 1 && alive3num >=1))        
+        return Level2;  //活四，双四或死四活三
+    if(alive3num >= 2)  
+        return Level3;  //双活三
+    if(situation.die3 >=1 && situation.alive3 >= 1) 
+        return Level4;  //死三活三
+    if(situation.die4 >= 1 && alive2num >= 1) 
+        return (Level5 + 50);  //单死四加一活二
+    if(situation.die4 >= 1) 
+        return Level5;  //单死四
+    if(situation.lowdie4 >= 1 && alive2num >= 1) 
+        return (Level6 + 50);  //单眠四加一活二
+    if(situation.lowdie4 >= 1)  
+        return Level6;  //眠四
+    if(situation.alive3>= 1 && alive2num >= 1) 
+        return (Level7 + 50);  //单活三加一活二
+    if(situation.alive3 >= 1)   
+        return Level7;  //单活三
+    if(situation.tiao3 >= 1 && alive2num >= 1) 
+        return (Level8 + 30);  //跳活三加一活二
+    if(situation.tiao3 >= 1)    
+        return Level8;  //跳活三
+    if(alive2num >= 2)   
+        return Level9;  //双活二
+    if(situation.die3 >= 1 && situation.alive2 >= 1) 
+        return (Level12 + 20);  //单死三加一活二
+    if(situation.alive2 >= 1)    
+        return Level10; //活二
+    if(situation.lowalive2 >= 1)    
+        return Level11; //低级活二
+    if(situation.die3 >= 1) 
+        return Level12; //单死三
+    if(situation.die2 >= 1) 
+        return Level13; //单死二
+    
+    return Level14;     //什么都没有 
 }
 
 void GetPoint()
@@ -680,50 +704,45 @@ void GetPoint()
     int pchiscore,pcscore,hmhiscore,hmscore;    //hm为敌方，pc为我方
     int pctemscore = 0, hmtemscore = 0; //储存pc最高分时hm的分数与hm最高分时pc的分数，用于在平分时比较
     int x,y;
-    int pcx,pcy,hmx,hmy;
+    int pcx,pcy,hmx,hmy;                //储存我方最高分的位置和对方最高分的位置
     pchiscore = hmhiscore = 0;
     pcx = pcy = hmx = hmy = 0;
 
-    // for(int temy = 14; temy > 0; temy--){
-    //     for(int temx = 0; temx < 14; temx++)
-    //        scoreboard[temx][temy] = 0;
-    
-    // }//一些调试用代码
-
     for(x = 0; x <= 14; x++)
-        for(y = 0; y <= 14; y++)
-            if(WhetherOccupied(x,y))    //若是空置点
+        for(y = 0; y <= 14; y++)        //遍历棋盘
+            if(IsOccupied(x,y))    //若是空置点
             {
                 pcscore = AssessPoint(x,y,pcflag);  //看这点上电脑我方的得分
                 hmscore = AssessPoint(x,y,hmflag);  //看敌方得分
             
                 if(pcflag == BLACK)     //黑子才需要判断禁手
                 {
-                    if(WhetherForbidden(x,y) == FORBIDDEN)   //判断禁手
+                    if(IsForbidden(x,y) == FORBIDDEN)   //判断禁手
                         pcscore -= 10000;                               
                     //如果产生了双三或双四的话就会减10000分，但这比连五的分数低，所以如果双三双四与连五同时构成时程序还是会选择下成五获得胜利
-                    else if(pcflag == BLACK && WhetherForbidden(x,y) == LONGFORBIDDEN)
+                    else if(pcflag == BLACK && IsForbidden(x,y) == LONGFORBIDDEN)
                         pcscore = -1;
                     //长连禁手直接不给下
                 }
                 else if(hmflag == BLACK)    //同理对对方判断是否禁手 可以不需要堵是禁手的点
                 {
-                    if(WhetherForbidden(x,y) == FORBIDDEN)   //判断禁手
+                    if(IsForbidden(x,y) == FORBIDDEN)   //判断禁手
                         hmscore -= 5000;                               
                     //如果产生了双三或双四的话就会减5000分，但这比连五的分数低，所以如果双三双四与连五同时构成时程序还是会选择下成五获得胜利
-                    else if(pcflag == BLACK && WhetherForbidden(x,y) == LONGFORBIDDEN)
+                    else if(pcflag == BLACK && IsForbidden(x,y) == LONGFORBIDDEN)
                         hmscore = -1;
                     //长连禁手直接不给下
                 }
 
-                if(pcscore > pchiscore || (pcscore == pchiscore && hmscore > hmtemscore) ||    //选择更好的的点：自己分数更高，或自己分数持平但是这里敌方的分数更高，或者两者都持平但更接近棋盘中央
+                //选择点的依据：首先选我方分数高的；我方分数相等的时候下这一点敌方得分更高的；都相等时选离棋盘中央更近的
+                if(pcscore > pchiscore || (pcscore == pchiscore && hmscore > hmtemscore) ||   
                 (pcscore == pchiscore && hmscore == hmtemscore && (abs(x-7)+abs(y-7) < abs(pcx - 7)+abs(pcy - 7)))){//利用一个绝对值判断让分数相同时会选择靠近棋盘中央的点
-                    pchiscore = pcscore;
-                    hmtemscore = hmscore;
+                    pchiscore = pcscore;    //我方得分最高点存入
+                    hmtemscore = hmscore;   //顺便存入这一点的敌方得分，用于接下来比较
                     pcx = x;
                     pcy = y;
                 }
-
+                //看敌方得分最高点也是同理
                 if(hmscore > hmhiscore || (hmscore == hmhiscore && pcscore > pctemscore)
                 || (hmscore == hmhiscore && pcscore == pctemscore && (abs(x-7)+abs(y-7) < abs(hmx - 7)+abs(hmy - 7)))){
                 hmhiscore = hmscore;
@@ -746,32 +765,25 @@ void GetPoint()
         BestPoint[0] = hmx;
         BestPoint[1] = hmy;
     }
-
-
-    // for(int temy = 14; temy > 0; temy--){
-    //     for(int temx = 0; temx < 14; temx++)
-    //         printf("%3d ",scoreboard[temx][temy]);
-    //     printf("\n");
-    // }//一些调试用代码
-
 }
 
-//占用返回0 否则1
-int WhetherOccupied(int x,int y)
+//返回棋盘上一点有没有被占用，占用返回empty，否则1
+int IsOccupied(int x,int y)
 {
     if(Board[x][y] == WHITE || Board[x][y] == TemWHITE || Board[x][y] == BLACK || Board[x][y] == TemBLACK){
-        return 0;
+        return empty;
     }
     else{
         return 1;
     }
 }
 
-int WhetherWin(int x,int y,int flag)
+//判断胜负函数
+int IsWin(int x,int y,int flag)
 {
     int count = 1;
     int j;
-    GetPattern(x,y,flag);
+    GetPattern(x,y,flag);   //同样先把判断点周围情况写进pattern数组
     for(int i = 0; i <= 3; i++){
         count = 1;
         for(j = 1; Pattern[i][4-j] == 1; j++){
@@ -780,19 +792,19 @@ int WhetherWin(int x,int y,int flag)
         for(j = 1; Pattern[i][4+j] == 1; j++){
             count++;
         }
-        if(count == 5)   return 1;
+        if(count == 5)   return 1;                  //如果连五个 赢了
         if(count > 5 && flag == WHITE)  return 1;   //白棋无长连禁手
-        if(count > 5 && flag == BLACK)  return -1;
+        if(count > 5 && flag == BLACK)  return FORBIDDEN;  //黑棋长连禁手
     }
     return 0;
 }
 
 //判断一个空格（若下了黑棋）是否是禁手，由于仅限黑棋有禁手故参数仅有x,y，默认指黑棋。若触发禁手返回FORBIDDEN，否则返回1.
-int WhetherForbidden(int x,int y)
+int IsForbidden(int x,int y)
 {
     struct Situation situation = {0};
 
-    GetForbiddenPattern(x,y,BLACK);
+    GetForbiddenPattern(x,y,BLACK);     //把周围情况读进forbiddenpattern函数
     for(int i = 0; i <= 3; i++){
         int line;
         line = AssessForbiddenPatternLine(i,BLACK);
