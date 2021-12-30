@@ -18,7 +18,7 @@ int nMode;                          //游戏模式（1：人人对战；2：人机对战机器执黑
 int nWinner;                        //储存最后赢家
 int pcflag,hmflag;                  //电脑执哪一方
 
-struct Situation {//当前位置的形式，打分根据这个来打
+struct Situation {//当前位置的情况组合记录，打分根据这个来打
 	int win5;//5连珠
 	int alive4;//活4
 	int die4;//死4
@@ -72,11 +72,11 @@ void SelectMode();          //选择游戏模式
 int PlayGobang();           //五子棋内容
 
 //将棋形读取进Pattern,x,y为目标点位,Index表征以何方视角计分（BLACK/WHITE）
-void GetPattern(int x,int y,int Index, int pattern[4][9]); 
+void GetPattern(int x,int y,int Index); 
 //getpattern的辅助函数，会返回此时在pattern中应该为什么数字;BoardContent:棋盘上的内容，一般填Board[][],Index同上      
 int PatternNumber(int BoardContent,int Index);        
 //给旗形的一个方向返回是哪一种情况，linenumber为pattern中的行数（0-3）
-int AssessPatternLine(int linenumber, int index, int pattern[4][9]);
+int AssessPatternLine(int linenumber, int index);
 //对棋盘上空置的一点评估得出得分，返回分数,当然也可用于有棋子的点评估分数
 int AssessPoint(int x,int y,int flag);
 
@@ -90,7 +90,9 @@ int WhetherOccupied(int x,int y);
 int WhetherWin(int x,int y,int index);
 
 
-/*禁手判断部分，由于之前的读取棋形等函数都将pattern直接写在函数里了，修改不便，被迫重新写一组禁手判断专用的函数*/
+
+/*禁手判断部分，由于旗形判断和禁手判断用了两个独立的二维数组以免互相影响，
+但是传二维数组比较麻烦，干脆把之前的函数复制一遍，虽然臃肿了点但是清晰*/
 
 //功能同getpattern
 void GetForbiddenPattern(int x,int y,int Index);
@@ -115,10 +117,6 @@ int main()
     else if(nWinner == FORBIDDEN)
         printf("黑棋下出禁手，白棋胜\n");
     
-
-    
-    
-    
     system("pause");
     return 0;
 }
@@ -136,7 +134,7 @@ void SelectMode()
         scanf("%d",&temFlag);
         if(temFlag == 1){
             nMode = 2;      
-            pcflag = BLACK;
+            pcflag = BLACK;     //记录电脑与人分别执什么棋在全局变量中，便于之后各函数使用
             hmflag = WHITE;
         }
         else if(temFlag == 2){
@@ -154,7 +152,7 @@ void SelectMode()
     else{
         goto ReSelect;
     }
-    getchar();
+    getchar();      //getchar吃掉scanf带来的回车
 
 }
 
@@ -274,8 +272,9 @@ int PlayGobang()
             tBlacky = tBlacky - 1;
             if(WhetherOccupied(tBlackx,tBlacky) == 0 || tBlackx < 0 || tBlackx > 14 || tBlacky < 0 || tBlacky > 14)      //若落子非法或被占用，回到落子之前
                 goto BLACKrego0;
+
             Board[tBlackx][tBlacky] = TemBLACK;
-            nFlag = 2;
+            nFlag = 2;  //变换目前下棋方（用于显示标题）
             ShowBoard();
             if((forbidden = WhetherForbidden(tBlackx,tBlacky)) == LONGFORBIDDEN)    //黑棋每一步结束之后，判断是否赢了或者下出禁手，先考虑长连，再看赢没赢，再看是否双三双四
                 return FORBIDDEN;
@@ -307,14 +306,14 @@ int PlayGobang()
         }
     }   
    
-    if(nMode == 2){      //人机对战，电脑执黑
+    if(nMode == 2){         //模式：人机对战且电脑执黑
         nFlag = 2;
         while(1){
             /* 黑子机器下 */
             if(iFlag_FirstRound == 1){
                 Board[tBlackx][tBlacky] = BLACK;        //如果不是第一局，将前一步调整为通常显示
             }
-            GetPoint();
+            GetPoint();                                 //机器思考函数，将找到的点导入bestpoint数组
             tBlackx = BestPoint[0];
             tBlacky = BestPoint[1];
             Board[tBlackx][tBlacky] = TemBLACK;
@@ -355,7 +354,7 @@ int PlayGobang()
         }
    }
      
-    if(nMode == 3){
+    if(nMode == 3){         //模式：人机对战且电脑执白
         nFlag = 1;
         while(1){
             /* 黑子人下 */
@@ -404,177 +403,218 @@ int PlayGobang()
     return 0;
 }
 
-void GetPattern(int x,int y,int Index, int pattern[4][9])
+void GetPattern(int x,int y,int Index)
 {
 
-    for(int i = 0; i < 4; i++){                 //初始化
+    for(int i = 0; i < 4; i++){                 //初始化，将整个数组初始化为被占满的状态，这样遇到墙停止读入时就可以显示为占满
         for(int j = 0; j < 9; j++)
-            pattern[i][j] = 2;
+            Pattern[i][j] = 2;
     }
     for(int i = 0; i < 4; i++)
-        pattern[i][4] = 1;
+        Pattern[i][4] = 1;
     
     for(int i = 1; i <= 4 && (x-i) >= 0; i++){  //横
-        pattern[0][4-i] = PatternNumber(Board[x-i][y],Index);
+        Pattern[0][4-i] = PatternNumber(Board[x-i][y],Index);   //patternnumber显示是该填入空置、我方还是敌方
     }
     for(int i = 1; i <= 4 && (x+i) <= 14; i++){
-        pattern[0][4+i] = PatternNumber(Board[x+i][y],Index);
+        Pattern[0][4+i] = PatternNumber(Board[x+i][y],Index);   //先横着往左填，再往右填，以下同理
     }   
     
     for(int i = 1; i <= 4 && (y-i) >= 0; i++){  //竖
-        pattern[1][4-i] = PatternNumber(Board[x][y-i],Index);
+        Pattern[1][4-i] = PatternNumber(Board[x][y-i],Index);
     }
     for(int i = 1; i <= 4 && (y+i) <= 14; i++){
-        pattern[1][4+i] = PatternNumber(Board[x][y+i],Index);
+        Pattern[1][4+i] = PatternNumber(Board[x][y+i],Index);
     }   
     
     for(int i = 1; i <= 4 && (y-i) >= 0 && (x-i) >= 0; i++){  //左斜
-        pattern[2][4-i] = PatternNumber(Board[x-i][y-i],Index);
+        Pattern[2][4-i] = PatternNumber(Board[x-i][y-i],Index);
     }
     for(int i = 1; i <= 4 && (y+i) <= 14 && (x+i) <= 14; i++){
-        pattern[2][4+i] = PatternNumber(Board[x+i][y+i],Index);
+        Pattern[2][4+i] = PatternNumber(Board[x+i][y+i],Index);
     }   
     
     for(int i = 1; i <= 4 && (y+i) <= 14 && (x-i) >= 0; i++){  //右斜
-        pattern[3][4-i] = PatternNumber(Board[x-i][y+i],Index);
+        Pattern[3][4-i] = PatternNumber(Board[x-i][y+i],Index);
     }
     for(int i = 1; i <= 4 && (y+i) >= 0 && (x-i) <=14; i++){
-        pattern[3][4+i] = PatternNumber(Board[x+i][y-i],Index);
+        Pattern[3][4+i] = PatternNumber(Board[x+i][y-i],Index);
     }       
-    }
+}
 
-//0为空 1为我方 2为敌方或墙
-int PatternNumber(int a,int Index)
+//0为空 1为我方 2为敌方或墙。读取棋盘上一点状态填入pattern时使用
+int PatternNumber(int a,int Index)  
 {
     if(a == WHITE || a == TemWHITE){
-        if(Index == WHITE) return 1;
+        if(Index == WHITE) return 1;    //对白方来说，白色是我方，反之亦然
         else return 2;
     }
     else if(a == BLACK || a == TemBLACK){
         if(Index == BLACK) return 1;
         else return 2;
     }
-    else return 0;
+    else return 0;      //都没有的话返回空置
 }
 
-int AssessPatternLine(int linenumber, int flag, int pattern[4][9])
+int AssessPatternLine(int linenumber, int flag)     
+//评价pattern中的一行是何种形态（活三？活二？），主要的做法是先看有几个我方的棋子连在一起，然后看左右两边的情况分情况细致讨论
+//虽然没有字符串匹配的方法简洁，但是可以涵盖所有情况。
 {
-    int count = 1;
+    int count = 1;  //使用此函数时中心点一定是有我方棋的，统计有几个棋子连在一起
     int i;
-    int left,right;
-    int leftpos,rightpos;
+    int left,right; //记录左侧断开点是遇到空格还是敌方棋子
+    int leftpos,rightpos;       //记录断开的位置
    
-        for(i = 1; pattern[linenumber][4-i] == 1; i++){
+        for(i = 1; Pattern[linenumber][4-i] == 1; i++){
             count++;
         }
-        left = pattern[linenumber][4-i];
+        left = Pattern[linenumber][4-i];
         leftpos = 4-i;
-        for(i = 1; pattern[linenumber][4+i] == 1; i++){
+        for(i = 1; Pattern[linenumber][4+i] == 1; i++){
             count++;
         }
-        right = pattern[linenumber][4+i];
+        right = Pattern[linenumber][4+i];
         rightpos = 4+i;
+        //以上记录了中央连续棋子的数量和两边断开点的位置情况
 
-        if(count > 5)
+        if(count > 5){
             if(flag == BLACK)
                 return LONGFORBIDDEN;       //长连了
             else if(flag == WHITE)
                 return WIN5;
-        else if(count == 5)
+        }
+        else if(count == 5) //五个是赢五
             return WIN5;
         else if(count == 4){
-            if(left == empty && right == empty) return ALIVE4;
-            else if(left == hiscolor && right == hiscolor) return NOTHREAT;
-            else    return DIE4;
+            if(left == empty && right == empty) 
+                return ALIVE4;  //例如，中央四子连线，且两侧都是空置，就是活四，以下各判断不再详细说明
+            else if(left == hiscolor && right == hiscolor) 
+                return NOTHREAT;    //被堵死了，什么都不是
+            else    return DIE4;    //死四
         }
         
         else if(count == 3){
-            int left2 = pattern[linenumber][leftpos-1];
-            int right2 = pattern[linenumber][rightpos + 1];
-            if(left == empty && right == empty){
+            int left2 = Pattern[linenumber][leftpos-1];
+            int right2 = Pattern[linenumber][rightpos + 1];     //三连珠情况的判断不但要看两侧，还要看两侧往外再往外推一个棋子的情况
+            if(left == empty && right == empty){                //左右都是空置的时候，再看左右往外推一个是什么棋子
                 if(left2 == hiscolor && right2 == hiscolor)
-                return DIE3;
+                    return DIE3;    //死三
                 else if(left2 == mycolor || right2 == mycolor)
-                return LOWDIE4;
+                    return LOWDIE4; //眠四
                 else if(left2 == empty || right2 == empty)
-                return ALIVE3;
+                    return ALIVE3;  //活三
             }
-            else if(left == hiscolor && right == hiscolor)  return NOTHREAT;
+            else if(left == hiscolor && right == hiscolor)  
+                return NOTHREAT;
             else if(left == hiscolor){
-                if(right2 == empty)    return DIE3;
-                else if(right2 == mycolor) return LOWDIE4;
+                if(right2 == empty)    
+                    return DIE3;
+                else if(right2 == mycolor) 
+                    return LOWDIE4;
             }
             else if(right == hiscolor){
-                if(left2 == empty)    return DIE3;
-                else if(left2 == mycolor) return LOWDIE4;
+                if(left2 == empty)    
+                    return DIE3;
+                else if(left2 == mycolor) 
+                    return LOWDIE4;
             }
         }
-        else if(count == 2){
-            int left1 = pattern[linenumber][leftpos-1];
-            int right1 = pattern[linenumber][rightpos + 1];
-            int left2 = pattern[linenumber][leftpos-2];
-            int right2 = pattern[linenumber][rightpos + 2];
+        else if(count == 2){            //在中央两联珠的时候为了判断还需要再往外看一个棋子的情况
+            int left1 = Pattern[linenumber][leftpos-1];
+            int right1 = Pattern[linenumber][rightpos + 1];
+            int left2 = Pattern[linenumber][leftpos-2];
+            int right2 = Pattern[linenumber][rightpos + 2]; 
 
             if(left == empty && right == empty)
             {
-                if((left1 == empty && left2 == mycolor) || (right1 == empty && right2 == mycolor))  return DIE3;
-                else if(left1 == empty && right1  == empty) return ALIVE2;
-                if((right1 == mycolor && right2 == mycolor)||(left1 == mycolor && left2 == mycolor))    return LOWDIE4;
-                if((right1 == mycolor && right2 == hiscolor) || (left1 == mycolor && left2 == hiscolor))    return DIE3;
-                if((right1 == mycolor && right2 == empty) || (left1 == mycolor && left2 == empty)) return TIAO3;
+                if((left1 == empty && left2 == mycolor) || (right1 == empty && right2 == mycolor))  
+                    return DIE3;
+                else if(left1 == empty && right1  == empty) 
+                    return ALIVE2;
+                if((right1 == mycolor && right2 == mycolor)||(left1 == mycolor && left2 == mycolor))    
+                    return LOWDIE4;
+                if((right1 == mycolor && right2 == hiscolor) || (left1 == mycolor && left2 == hiscolor))    
+                    return DIE3;
+                if((right1 == mycolor && right2 == empty) || (left1 == mycolor && left2 == empty)) 
+                    return TIAO3;
             }
-            else if(left == hiscolor && right == hiscolor)  return NOTHREAT;
+            else if(left == hiscolor && right == hiscolor)  
+                return NOTHREAT;
             else if(left == empty || right == empty)
             {
                 if(left == hiscolor){
-                    if(right1 == hiscolor || right2 == hiscolor)    return NOTHREAT;
-                    else if(right1 == empty && right2 == empty)     return DIE2;
-                    else if(right1 == mycolor && right2 == mycolor) return DIE4;
-                    else if(right1 == mycolor || right2 == mycolor) return DIE3;
+                    if(right1 == hiscolor || right2 == hiscolor)    
+                        return NOTHREAT;
+                    else if(right1 == empty && right2 == empty)     
+                        return DIE2;
+                    else if(right1 == mycolor && right2 == mycolor) 
+                        return DIE4;
+                    else if(right1 == mycolor || right2 == mycolor) 
+                        return DIE3;
                 }
                 else if(right == hiscolor){
-                    if(left1 == hiscolor || left2 == hiscolor)  return NOTHREAT;
-                    else if(left1 == empty && left2 == empty)   return DIE2;
-                    else if(left1 == mycolor && left2 == mycolor)   return DIE4;
-                    else if(left1 == mycolor || left2 == mycolor)   return DIE3;
+                    if(left1 == hiscolor || left2 == hiscolor)  
+                        return NOTHREAT;
+                    else if(left1 == empty && left2 == empty)   
+                        return DIE2;
+                    else if(left1 == mycolor && left2 == mycolor)   
+                        return DIE4;
+                    else if(left1 == mycolor || left2 == mycolor)   
+                        return DIE3;
                 }
             }
         }
-        else if(count == 1){
-            int left1 = pattern[linenumber][leftpos-1];
-            int right1 = pattern[linenumber][rightpos + 1];
-            int left2 = pattern[linenumber][leftpos-2];
-            int right2 = pattern[linenumber][rightpos + 2];
-            int left3 = pattern[linenumber][leftpos-3];
-            int right3 = pattern[linenumber][rightpos + 3];
+        else if(count == 1){        //一个棋子的情况更为复杂，这里参考了一写五子棋书籍的介绍，应该能涵盖所有的情况
+            int left1 = Pattern[linenumber][leftpos-1];
+            int right1 = Pattern[linenumber][rightpos + 1];
+            int left2 = Pattern[linenumber][leftpos-2];
+            int right2 = Pattern[linenumber][rightpos + 2];
+            int left3 = Pattern[linenumber][leftpos-3];
+            int right3 = Pattern[linenumber][rightpos + 3];
 
-            if(left == empty && left1 == mycolor && left2 == mycolor && left3 == mycolor && right == empty && right1 == mycolor && right2 == mycolor && right3 == mycolor)  return ALIVE4;
-            else if(left == empty && left1 == mycolor && left2 == mycolor && left3 == mycolor)   return LOWDIE4;
-            else if(right == empty && right1 == mycolor && right2 == mycolor && right3 == mycolor)   return LOWDIE4;
-            else if(left == empty && left1 == mycolor && left2 == mycolor && left3 == empty && right == empty)  return TIAO3;
-            else if(right == empty && right1 == mycolor && right2 ==mycolor && right3 == empty && left == empty) return TIAO3;
-            else if(left == empty && left1 == mycolor && left2 == mycolor && left3 == hiscolor && right == empty)   return DIE3;
-            else if(right == empty && right1 == mycolor && right2 == mycolor && right3 == hiscolor && left == empty)    return DIE3;
-            else if(left == empty && left1 == empty && left2 == mycolor && left3 == mycolor)    return DIE3;
-            else if(right == empty && right1 == empty && right2 == empty && right3 == mycolor)  return DIE3;
-            else if(left == empty && left1 == mycolor && left2 == empty && left3 == mycolor)    return DIE3;
-            else if(right == empty && right1 == mycolor && right2 == empty && right3 == mycolor)    return DIE3;
-            else if(left == empty && left1 == mycolor && left2 == empty && left3 == empty && right == empty)    return LOWALIVE2;
-            else if(right == empty && right1 == mycolor && right2 == empty && right3 == empty && left == empty) return LOWALIVE2;
-            else if(left == empty && left1 == empty && left2 == mycolor && left3 == empty && right == empty)    return LOWALIVE2;
-            else if(right == empty && right1 == empty && right2 == mycolor && right3 == empty && left == empty) return LOWALIVE2;
+            if(left == empty && left1 == mycolor && left2 == mycolor && left3 == mycolor && right == empty && right1 == mycolor && right2 == mycolor && right3 == mycolor)  
+                return ALIVE4;
+            else if(left == empty && left1 == mycolor && left2 == mycolor && left3 == mycolor)   
+                return LOWDIE4;
+            else if(right == empty && right1 == mycolor && right2 == mycolor && right3 == mycolor)   
+                return LOWDIE4;
+            else if(left == empty && left1 == mycolor && left2 == mycolor && left3 == empty && right == empty)     
+                return TIAO3;
+            else if(right == empty && right1 == mycolor && right2 ==mycolor && right3 == empty && left == empty) 
+                return TIAO3;
+            else if(left == empty && left1 == mycolor && left2 == mycolor && left3 == hiscolor && right == empty)   
+                return DIE3;
+            else if(right == empty && right1 == mycolor && right2 == mycolor && right3 == hiscolor && left == empty)    
+                return DIE3;
+            else if(left == empty && left1 == empty && left2 == mycolor && left3 == mycolor)    
+                return DIE3;
+            else if(right == empty && right1 == empty && right2 == empty && right3 == mycolor)  
+                return DIE3;
+            else if(left == empty && left1 == mycolor && left2 == empty && left3 == mycolor)    
+                return DIE3;
+            else if(right == empty && right1 == mycolor && right2 == empty && right3 == mycolor)    
+                return DIE3;
+            else if(left == empty && left1 == mycolor && left2 == empty && left3 == empty && right == empty)    
+                return LOWALIVE2;
+            else if(right == empty && right1 == mycolor && right2 == empty && right3 == empty && left == empty) 
+                return LOWALIVE2;
+            else if(left == empty && left1 == empty && left2 == mycolor && left3 == empty && right == empty)    
+                return LOWALIVE2;
+            else if(right == empty && right1 == empty && right2 == mycolor && right3 == empty && left == empty) 
+                return LOWALIVE2;
         }
         return NOTHREAT;
     }
 
-int AssessPoint(int x,int y,int flag)
+//给一个点打分，看看下在这里能得多少分
+int AssessPoint(int x,int y,int flag)       
 {
     struct Situation situation = {0};
 
-    GetPattern(x,y,flag,Pattern);
+    GetPattern(x,y,flag);
     for(int i = 0; i <= 3; i++){
         int line;
-        line = AssessPatternLine(i,flag,Pattern);
+        line = AssessPatternLine(i,flag);
         switch(line){
         case LONGFORBIDDEN:
         case WIN5:
@@ -731,7 +771,7 @@ int WhetherWin(int x,int y,int flag)
 {
     int count = 1;
     int j;
-    GetPattern(x,y,flag,Pattern);
+    GetPattern(x,y,flag);
     for(int i = 0; i <= 3; i++){
         count = 1;
         for(j = 1; Pattern[i][4-j] == 1; j++){
@@ -752,10 +792,10 @@ int WhetherForbidden(int x,int y)
 {
     struct Situation situation = {0};
 
-    GetPattern(x,y,BLACK,ForbiddenPattern);
+    GetForbiddenPattern(x,y,BLACK);
     for(int i = 0; i <= 3; i++){
         int line;
-        line = AssessPatternLine(i,BLACK,ForbiddenPattern);
+        line = AssessForbiddenPatternLine(i,BLACK);
         switch(line){
         case LONGFORBIDDEN:
             return LONGFORBIDDEN;
@@ -805,4 +845,155 @@ int WhetherForbidden(int x,int y)
     return 1;           
 
 
+}
+
+//功能同getpattern
+void GetForbiddenPattern(int x,int y,int Index)
+{
+    for(int i = 0; i < 4; i++){                 //初始化
+        for(int j = 0; j < 9; j++)
+            ForbiddenPattern[i][j] = 2;
+    }
+    for(int i = 0; i < 4; i++)
+        ForbiddenPattern[i][4] = 1;
+    
+    for(int i = 1; i <= 4 && (x-i) >= 0; i++){  //横
+        ForbiddenPattern[0][4-i] = PatternNumber(Board[x-i][y],Index);
+    }
+    for(int i = 1; i <= 4 && (x+i) <= 14; i++){
+        ForbiddenPattern[0][4+i] = PatternNumber(Board[x+i][y],Index);
+    }   
+    
+    for(int i = 1; i <= 4 && (y-i) >= 0; i++){  //竖
+        ForbiddenPattern[1][4-i] = PatternNumber(Board[x][y-i],Index);
+    }
+    for(int i = 1; i <= 4 && (y+i) <= 14; i++){
+        ForbiddenPattern[1][4+i] = PatternNumber(Board[x][y+i],Index);
+    }   
+    
+    for(int i = 1; i <= 4 && (y-i) >= 0 && (x-i) >= 0; i++){  //左斜
+        ForbiddenPattern[2][4-i] = PatternNumber(Board[x-i][y-i],Index);
+    }
+    for(int i = 1; i <= 4 && (y+i) <= 14 && (x+i) <= 14; i++){
+        ForbiddenPattern[2][4+i] = PatternNumber(Board[x+i][y+i],Index);
+    }   
+    
+    for(int i = 1; i <= 4 && (y+i) <= 14 && (x-i) >= 0; i++){  //右斜
+        ForbiddenPattern[3][4-i] = PatternNumber(Board[x-i][y+i],Index);
+    }
+    for(int i = 1; i <= 4 && (y+i) >= 0 && (x-i) <=14; i++){
+        ForbiddenPattern[3][4+i] = PatternNumber(Board[x+i][y-i],Index);
+    }     
+}  
+//功能同assesspattern
+int AssessForbiddenPatternLine(int linenumber, int flag)
+{
+    
+    int count = 1;
+    int i;
+    int left,right;
+    int leftpos,rightpos;
+   
+        for(i = 1; ForbiddenPattern[linenumber][4-i] == 1; i++){
+            count++;
+        }
+        left = ForbiddenPattern[linenumber][4-i];
+        leftpos = 4-i;
+        for(i = 1; ForbiddenPattern[linenumber][4+i] == 1; i++){
+            count++;
+        }
+        right = ForbiddenPattern[linenumber][4+i];
+        rightpos = 4+i;
+
+        if(count > 5)
+            if(flag == BLACK)
+                return LONGFORBIDDEN;       //长连了
+            else if(flag == WHITE)
+                return WIN5;
+        else if(count == 5)
+            return WIN5;
+        else if(count == 4){
+            if(left == empty && right == empty) return ALIVE4;
+            else if(left == hiscolor && right == hiscolor) return NOTHREAT;
+            else    return DIE4;
+        }
+        
+        else if(count == 3){
+            int left2 = ForbiddenPattern[linenumber][leftpos-1];
+            int right2 = ForbiddenPattern[linenumber][rightpos + 1];
+            if(left == empty && right == empty){
+                if(left2 == hiscolor && right2 == hiscolor)
+                return DIE3;
+                else if(left2 == mycolor || right2 == mycolor)
+                return LOWDIE4;
+                else if(left2 == empty || right2 == empty)
+                return ALIVE3;
+            }
+            else if(left == hiscolor && right == hiscolor)  return NOTHREAT;
+            else if(left == hiscolor){
+                if(right2 == empty)    return DIE3;
+                else if(right2 == mycolor) return LOWDIE4;
+            }
+            else if(right == hiscolor){
+                if(left2 == empty)    return DIE3;
+                else if(left2 == mycolor) return LOWDIE4;
+            }
+        }
+        else if(count == 2){
+            int left1 = ForbiddenPattern[linenumber][leftpos-1];
+            int right1 = ForbiddenPattern[linenumber][rightpos + 1];
+            int left2 = ForbiddenPattern[linenumber][leftpos-2];
+            int right2 = ForbiddenPattern[linenumber][rightpos + 2];
+
+            if(left == empty && right == empty)
+            {
+                if((left1 == empty && left2 == mycolor) || (right1 == empty && right2 == mycolor))  return DIE3;
+                else if(left1 == empty && right1  == empty) return ALIVE2;
+                if((right1 == mycolor && right2 == mycolor)||(left1 == mycolor && left2 == mycolor))    return LOWDIE4;
+                if((right1 == mycolor && right2 == hiscolor) || (left1 == mycolor && left2 == hiscolor))    return DIE3;
+                if((right1 == mycolor && right2 == empty) || (left1 == mycolor && left2 == empty)) return TIAO3;
+            }
+            else if(left == hiscolor && right == hiscolor)  return NOTHREAT;
+            else if(left == empty || right == empty)
+            {
+                if(left == hiscolor){
+                    if(right1 == hiscolor || right2 == hiscolor)    return NOTHREAT;
+                    else if(right1 == empty && right2 == empty)     return DIE2;
+                    else if(right1 == mycolor && right2 == mycolor) return DIE4;
+                    else if(right1 == mycolor || right2 == mycolor) return DIE3;
+                }
+                else if(right == hiscolor){
+                    if(left1 == hiscolor || left2 == hiscolor)  return NOTHREAT;
+                    else if(left1 == empty && left2 == empty)   return DIE2;
+                    else if(left1 == mycolor && left2 == mycolor)   return DIE4;
+                    else if(left1 == mycolor || left2 == mycolor)   return DIE3;
+                }
+            }
+        }
+        else if(count == 1){
+            int left1 = ForbiddenPattern[linenumber][leftpos-1];
+            int right1 = ForbiddenPattern[linenumber][rightpos + 1];
+            int left2 = ForbiddenPattern[linenumber][leftpos-2];
+            int right2 = ForbiddenPattern[linenumber][rightpos + 2];
+            int left3 = ForbiddenPattern[linenumber][leftpos-3];
+            int right3 = ForbiddenPattern[linenumber][rightpos + 3];
+
+            if(left == empty && left1 == mycolor && left2 == mycolor && left3 == mycolor && right == empty && right1 == mycolor && right2 == mycolor && right3 == mycolor)  return ALIVE4;
+            else if(left == empty && left1 == mycolor && left2 == mycolor && left3 == mycolor)   return LOWDIE4;
+            else if(right == empty && right1 == mycolor && right2 == mycolor && right3 == mycolor)   return LOWDIE4;
+            else if(left == empty && left1 == mycolor && left2 == mycolor && left3 == empty && right == empty)  return TIAO3;
+            else if(right == empty && right1 == mycolor && right2 ==mycolor && right3 == empty && left == empty) return TIAO3;
+            else if(left == empty && left1 == mycolor && left2 == mycolor && left3 == hiscolor && right == empty)   return DIE3;
+            else if(right == empty && right1 == mycolor && right2 == mycolor && right3 == hiscolor && left == empty)    return DIE3;
+            else if(left == empty && left1 == empty && left2 == mycolor && left3 == mycolor)    return DIE3;
+            else if(right == empty && right1 == empty && right2 == empty && right3 == mycolor)  return DIE3;
+            else if(left == empty && left1 == mycolor && left2 == empty && left3 == mycolor)    return DIE3;
+            else if(right == empty && right1 == mycolor && right2 == empty && right3 == mycolor)    return DIE3;
+            else if(left == empty && left1 == mycolor && left2 == empty && left3 == empty && right == empty)    return LOWALIVE2;
+            else if(right == empty && right1 == mycolor && right2 == empty && right3 == empty && left == empty) return LOWALIVE2;
+            else if(left == empty && left1 == empty && left2 == mycolor && left3 == empty && right == empty)    return LOWALIVE2;
+            else if(right == empty && right1 == empty && right2 == mycolor && right3 == empty && left == empty) return LOWALIVE2;
+        }
+        return NOTHREAT;
+    
 }
